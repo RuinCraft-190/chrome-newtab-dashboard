@@ -10,6 +10,19 @@
         <section class="section">
           <h2>天气设置</h2>
           <div class="form-group">
+            <label>认证方式</label>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" v-model="authType" value="apikey" @change="saveAuthType" />
+                <span>API Key（简单）</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" v-model="authType" value="jwt" @change="saveAuthType" />
+                <span>JWT（推荐）</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
             <label>城市</label>
             <input
               v-model="weatherCity"
@@ -18,7 +31,7 @@
               @blur="saveWeatherCity"
             />
           </div>
-          <div class="form-group">
+          <div v-if="authType === 'apikey'" class="form-group">
             <label>和风天气 API Key</label>
             <input
               v-model="weatherApiKey"
@@ -29,6 +42,42 @@
             <small>
               获取地址: <a href="https://dev.qweather.com/" target="_blank">https://dev.qweather.com/</a>
             </small>
+          </div>
+          <div v-if="authType === 'jwt'">
+            <div class="form-group">
+              <label>API ID</label>
+              <input
+                v-model="qweatherApiId"
+                type="text"
+                placeholder="输入你的 API ID"
+                @blur="saveJWTConfig"
+              />
+              <small>
+                在控制台创建 JWT 凭据后获取
+              </small>
+            </div>
+            <div class="form-group">
+              <label>私钥 (Private Key)</label>
+              <textarea
+                v-model="qweatherPrivateKey"
+                placeholder="粘贴你的私钥（包含 BEGIN/END 行）"
+                rows="4"
+                @blur="saveJWTConfig"
+              ></textarea>
+              <small>
+                从 <code>ed25519-private.pem</code> 文件中复制完整内容
+              </small>
+            </div>
+            <div class="info-box">
+              <strong>如何获取 JWT 凭据：</strong>
+              <ol>
+                <li>访问 <a href="https://console.qweather.com/" target="_blank">和风天气控制台</a></li>
+                <li>创建项目并选择免费订阅</li>
+                <li>添加凭据，选择 JWT 认证</li>
+                <li>将项目中的 <code>ed25519-public.pem</code> 公钥粘贴到控制台</li>
+                <li>获取 API ID 并在此配置私钥</li>
+              </ol>
+            </div>
           </div>
         </section>
 
@@ -165,6 +214,9 @@ import {
 
 const weatherCity = ref('北京')
 const weatherApiKey = ref('')
+const authType = ref<'apikey' | 'jwt'>('jwt')
+const qweatherApiId = ref('')
+const qweatherPrivateKey = ref('')
 const sites = ref<SiteConfig[]>([])
 const globalSettings = ref({
   defaultSchedule: '09:00',
@@ -180,9 +232,22 @@ const newSite = ref({
 })
 
 async function loadData() {
-  const result = await chrome.storage.local.get(['weather', 'checkin'])
+  const result = await chrome.storage.local.get(['weather', 'checkin', 'qweatherApiId', 'qweatherPrivateKey'])
   if (result.weather) {
     weatherCity.value = result.weather.city || '北京'
+    weatherApiKey.value = result.weather.apiKey || ''
+  }
+  if (result.qweatherApiId) {
+    qweatherApiId.value = result.qweatherApiId
+  }
+  if (result.qweatherPrivateKey) {
+    qweatherPrivateKey.value = result.qweatherPrivateKey
+  }
+  // 根据是否有配置决定认证类型
+  if (qweatherApiId.value || qweatherPrivateKey.value) {
+    authType.value = 'jwt'
+  } else if (weatherApiKey.value) {
+    authType.value = 'apikey'
   }
   if (result.checkin?.sites) {
     sites.value = result.checkin.sites
@@ -203,6 +268,17 @@ async function saveWeatherApiKey() {
   const weather = result.weather || { city: '北京', lastUpdate: 0, data: null }
   weather.apiKey = weatherApiKey.value
   await chrome.storage.local.set({ weather })
+}
+
+async function saveAuthType() {
+  await chrome.storage.local.set({ weatherAuthType: authType.value })
+}
+
+async function saveJWTConfig() {
+  await chrome.storage.local.set({
+    qweatherApiId: qweatherApiId.value,
+    qweatherPrivateKey: qweatherPrivateKey.value
+  })
 }
 
 async function addSite() {
@@ -334,12 +410,29 @@ onMounted(() => {
 
 .form-group input[type="text"],
 .form-group input[type="time"],
-.form-group select {
+.form-group select,
+.form-group textarea {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 1rem;
+  font-family: inherit;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.875rem;
+}
+
+.form-group small code {
+  background: #f7fafc;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.8125rem;
 }
 
 .form-group small {
@@ -363,6 +456,55 @@ onMounted(() => {
 .checkbox-label input[type="checkbox"] {
   width: 18px;
   height: 18px;
+}
+
+.radio-group {
+  display: flex;
+  gap: 16px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.radio-label input[type="radio"] {
+  width: 18px;
+  height: 18px;
+}
+
+.info-box {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.info-box strong {
+  display: block;
+  color: #0369a1;
+  margin-bottom: 8px;
+}
+
+.info-box ol {
+  margin: 0;
+  padding-left: 20px;
+  color: #0c4a6e;
+}
+
+.info-box li {
+  margin-bottom: 6px;
+}
+
+.info-box code {
+  background: #e0f2fe;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.8125rem;
 }
 
 .sites-list {

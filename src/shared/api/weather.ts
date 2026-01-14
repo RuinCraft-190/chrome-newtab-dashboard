@@ -1,28 +1,88 @@
 import type { WeatherData } from '@shared/types'
-import { QWEATHER_API_BASE } from '@shared/constants'
+import { QWEATHER_API_BASE, MESSAGE_TYPES } from '@shared/constants'
+
+export type AuthType = 'apikey' | 'jwt'
 
 export class QWeatherService {
   private apiKey: string
   private baseUrl: string
+  private authType: AuthType
+  private cachedToken: { token: string; expiresAt: number } | null = null
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || import.meta.env.VITE_QWEATHER_API_KEY || ''
+  constructor(config?: { apiKey?: string; authType?: AuthType }) {
+    this.apiKey = config?.apiKey || import.meta.env.VITE_QWEATHER_API_KEY || ''
     this.baseUrl = QWEATHER_API_BASE
+    this.authType = config?.authType || (this.apiKey ? 'apikey' : 'jwt')
+  }
+
+  /**
+   * 获取认证头
+   */
+  private async getAuthHeader(): Promise<Record<string, string>> {
+    if (this.authType === 'jwt') {
+      // 检查缓存的 token 是否有效
+      if (this.cachedToken && Date.now() < this.cachedToken.expiresAt) {
+        return { Authorization: this.cachedToken.token }
+      }
+
+      // 从 background 获取 JWT token
+      const token = await this.getJWTFromBackground()
+      this.cachedToken = {
+        token,
+        expiresAt: Date.now() + 30 * 60 * 1000 // 30分钟后过期（提前5分钟刷新）
+      }
+      return { Authorization: token }
+    } else {
+      return { 'X-QW-Api-Key': this.apiKey }
+    }
+  }
+
+  /**
+   * 从 background service worker 获取 JWT token
+   */
+  private async getJWTFromBackground(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        { action: MESSAGE_TYPES.GET_WEATHER },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message))
+            return
+          }
+
+          if (response?.success) {
+            resolve(response.token)
+          } else {
+            reject(new Error(response?.error || '获取 JWT token 失败'))
+          }
+        }
+      )
+    })
   }
 
   setApiKey(apiKey: string) {
     this.apiKey = apiKey
+    this.authType = 'apikey'
+  }
+
+  setAuthType(authType: AuthType) {
+    this.authType = authType
   }
 
   async getWeatherByLocation(location: string): Promise<WeatherData> {
-    if (!this.apiKey) {
-      throw new Error('请先配置和风天气 API Key')
+    const authHeader = await this.getAuthHeader()
+
+    if (!authHeader.Authorization && !authHeader['X-QW-Api-Key']) {
+      throw new Error('请先配置和风天气 API Key 或 JWT')
     }
 
     try {
-      const response = await fetch(
-        `${this.baseUrl}/weather/now?location=${encodeURIComponent(location)}&key=${this.apiKey}`
-      )
+      const url = new URL(`${this.baseUrl}/weather/now`)
+      url.searchParams.set('location', encodeURIComponent(location))
+
+      const response = await fetch(url.toString(), {
+        headers: authHeader
+      })
 
       if (!response.ok) {
         throw new Error(`Weather API request failed: ${response.status}`)
@@ -53,15 +113,90 @@ export class QWeatherService {
     }
   }
 
-  async searchCity(keyword: string): Promise<any[]> {
-    if (!this.apiKey) {
-      throw new Error('请先配置和风天气 API Key')
+  /**
+   * 获取天气预报
+   */
+  async getForecast(location: string, days: number = 3): Promise<any> {
+    const authHeader = await this.getAuthHeader()
+
+    if (!authHeader.Authorization && !authHeader['X-QW-Api-Key']) {
+      throw new Error('请先配置和风天气 API Key 或 JWT')
     }
 
     try {
-      const response = await fetch(
-        `${this.baseUrl}/city/lookup?location=${encodeURIComponent(keyword)}&key=${this.apiKey}`
-      )
+      const url = new URL(`${this.baseUrl}/weather/${days}d`)
+      url.searchParams.set('location', encodeURIComponent(location))
+
+      const response = await fetch(url.toString(), {
+        headers: authHeader
+      })
+
+      if (!response.ok) {
+        throw new Error(`Forecast API request failed: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (result.code !== '200') {
+        throw new Error(`Forecast API error: ${result.code}`)
+      }
+
+      return result.daily
+    } catch (error) {
+      console.error('Failed to fetch forecast:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 获取空气质量
+   */
+  async getAirQuality(location: string): Promise<any> {
+    const authHeader = await this.getAuthHeader()
+
+    if (!authHeader.Authorization && !authHeader['X-QW-Api-Key']) {
+      throw new Error('请先配置和风天气 API Key 或 JWT')
+    }
+
+    try {
+      const url = new URL(`${this.baseUrl}/air/now`)
+      url.searchParams.set('location', encodeURIComponent(location))
+
+      const response = await fetch(url.toString(), {
+        headers: authHeader
+      })
+
+      if (!response.ok) {
+        throw new Error(`Air quality API request failed: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (result.code !== '200') {
+        throw new Error(`Air quality API error: ${result.code}`)
+      }
+
+      return result.now
+    } catch (error) {
+      console.error('Failed to fetch air quality:', error)
+      throw error
+    }
+  }
+
+  async searchCity(keyword: string): Promise<any[]> {
+    const authHeader = await this.getAuthHeader()
+
+    if (!authHeader.Authorization && !authHeader['X-QW-Api-Key']) {
+      throw new Error('请先配置和风天气 API Key 或 JWT')
+    }
+
+    try {
+      const url = new URL(`${this.baseUrl}/city/lookup`)
+      url.searchParams.set('location', encodeURIComponent(keyword))
+
+      const response = await fetch(url.toString(), {
+        headers: authHeader
+      })
 
       if (!response.ok) {
         throw new Error(`City lookup failed: ${response.status}`)

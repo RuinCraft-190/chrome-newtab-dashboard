@@ -17,9 +17,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(error => sendResponse({ success: false, error: error.message }))
     return true
   }
+
+  if (message.action === 'RELOAD_ADAPTERS') {
+    adapterRegistry.reloadUserAdapters().then(() => {
+      sendResponse({ success: true })
+    })
+    return true
+  }
 })
 
-async function handleCheckIn(message: any) {
+/**
+ * @param {Object} message
+ * @param {string} message.action
+ */
+async function handleCheckIn(message) {
   const currentUrl = window.location.href
 
   const adapter = adapterRegistry.match(currentUrl)
@@ -64,12 +75,3 @@ async function handleGetStatus() {
     isCheckedIn
   }
 }
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'RELOAD_ADAPTERS') {
-    adapterRegistry.reloadUserAdapters().then(() => {
-      sendResponse({ success: true })
-    })
-    return true
-  }
-})
