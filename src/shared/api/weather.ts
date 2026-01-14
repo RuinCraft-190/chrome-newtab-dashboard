@@ -19,18 +19,23 @@ export class QWeatherService {
    * 获取认证头
    */
   private async getAuthHeader(): Promise<Record<string, string>> {
+    console.log('[QWeatherService] authType:', this.authType)
+
     if (this.authType === 'jwt') {
       // 检查缓存的 token 是否有效
       if (this.cachedToken && Date.now() < this.cachedToken.expiresAt) {
+        console.log('[QWeatherService] Using cached token:', this.cachedToken.token.substring(0, 50) + '...')
         return { Authorization: this.cachedToken.token }
       }
 
       // 从 background 获取 JWT token
+      console.log('[QWeatherService] Fetching token from background...')
       const token = await this.getJWTFromBackground()
       this.cachedToken = {
         token,
         expiresAt: Date.now() + 30 * 60 * 1000 // 30分钟后过期（提前5分钟刷新）
       }
+      console.log('[QWeatherService] Got token:', token.substring(0, 50) + '...')
       return { Authorization: token }
     } else {
       return { 'X-QW-Api-Key': this.apiKey }
@@ -72,19 +77,25 @@ export class QWeatherService {
   async getWeatherByLocation(location: string): Promise<WeatherData> {
     const authHeader = await this.getAuthHeader()
 
+    console.log('[QWeatherService] authHeader:', authHeader)
+
     if (!authHeader.Authorization && !authHeader['X-QW-Api-Key']) {
       throw new Error('请先配置和风天气 API Key 或 JWT')
     }
 
     try {
       const url = new URL(`${this.baseUrl}/weather/now`)
-      url.searchParams.set('location', encodeURIComponent(location))
+      url.searchParams.set('location', location)
+
+      console.log('[QWeatherService] Fetching:', url.toString())
 
       const response = await fetch(url.toString(), {
         headers: authHeader
       })
 
       if (!response.ok) {
+        console.error('[QWeatherService] Response status:', response.status)
+        console.error('[QWeatherService] Response headers:', [...response.headers.entries()])
         throw new Error(`Weather API request failed: ${response.status}`)
       }
 
@@ -125,7 +136,7 @@ export class QWeatherService {
 
     try {
       const url = new URL(`${this.baseUrl}/weather/${days}d`)
-      url.searchParams.set('location', encodeURIComponent(location))
+      url.searchParams.set('location', location)
 
       const response = await fetch(url.toString(), {
         headers: authHeader
@@ -160,7 +171,7 @@ export class QWeatherService {
 
     try {
       const url = new URL(`${this.baseUrl}/air/now`)
-      url.searchParams.set('location', encodeURIComponent(location))
+      url.searchParams.set('location', location)
 
       const response = await fetch(url.toString(), {
         headers: authHeader
@@ -183,7 +194,7 @@ export class QWeatherService {
     }
   }
 
-  async searchCity(keyword: string): Promise<any[]> {
+  async searchCity(keyword: string): Promise<Array<{id: string, name: string}>> {
     const authHeader = await this.getAuthHeader()
 
     if (!authHeader.Authorization && !authHeader['X-QW-Api-Key']) {
@@ -192,7 +203,7 @@ export class QWeatherService {
 
     try {
       const url = new URL(`${this.baseUrl}/city/lookup`)
-      url.searchParams.set('location', encodeURIComponent(keyword))
+      url.searchParams.set('location', keyword)
 
       const response = await fetch(url.toString(), {
         headers: authHeader
@@ -208,7 +219,10 @@ export class QWeatherService {
         throw new Error(`City lookup error: ${result.code}`)
       }
 
-      return result.location || []
+      return (result.location || []).map((loc: any) => ({
+        id: loc.id,
+        name: loc.name
+      }))
     } catch (error) {
       console.error('Failed to search city:', error)
       throw error

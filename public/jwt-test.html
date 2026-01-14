@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>和风天气测试</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    #result { margin-top: 20px; padding: 15px; background: #f5f5f5; white-space: pre-wrap; font-family: monospace; }
+    .success { border-left: 4px solid green; }
+    .error { border-left: 4px solid red; }
+  </style>
+</head>
+<body>
+  <h1>和风天气 JWT 测试</h1>
+  <button id="genBtn">生成 JWT Token</button>
+  <button id="testBtn">测试天气 API</button>
+  <div id="result"></div>
+
+  <script src="jwt-test.js"></script>
+</body>
+</html>

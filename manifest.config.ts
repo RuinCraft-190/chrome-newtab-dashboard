@@ -30,6 +30,7 @@ export default defineManifest({
     'alarms'
   ],
   host_permissions: [
-    'https://devapi.qweather.com/*'
+    'https://*.qweather.com/*',
+    'https://*.qweatherapi.com/*'
   ]
 })

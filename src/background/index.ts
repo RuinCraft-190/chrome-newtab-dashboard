@@ -87,15 +87,15 @@ async function handleGetStatus() {
 async function handleGetWeatherToken() {
   // 从 chrome.storage 中读取配置
   return new Promise((resolve, reject) => {
-    chrome.storage.local.get(['qweatherApiId', 'qweatherPrivateKey'], (result) => {
-      const { qweatherApiId, qweatherPrivateKey } = result
+    chrome.storage.local.get(['qweatherKeyId', 'qweatherProjectId', 'qweatherPrivateKey'], (result) => {
+      const { qweatherKeyId, qweatherProjectId, qweatherPrivateKey } = result
 
-      if (!qweatherApiId || !qweatherPrivateKey) {
-        reject(new Error('请先配置和风天气 API'))
+      if (!qweatherKeyId || !qweatherProjectId || !qweatherPrivateKey) {
+        reject(new Error('请先配置和风天气 JWT 凭据'))
         return
       }
 
-      getQWeatherToken(qweatherApiId, qweatherPrivateKey)
+      getQWeatherToken(qweatherKeyId, qweatherProjectId, qweatherPrivateKey)
         .then(resolve)
         .catch(reject)
     })

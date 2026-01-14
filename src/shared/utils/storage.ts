@@ -29,6 +29,15 @@ export class StorageHelper {
               defaultSchedule: '09:00',
               randomDelay: true
             }
+          },
+          work: result.work || {
+            monthlySalary: 10000,
+            payday: 15,
+            workStartHour: 9,
+            workStartMinute: 0,
+            workEndHour: 18,
+            workEndMinute: 0,
+            workdays: [1, 2, 3, 4, 5]
           }
         })
       })

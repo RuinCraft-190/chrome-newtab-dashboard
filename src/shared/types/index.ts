@@ -14,9 +14,25 @@ export interface WeatherData {
 
 export interface WeatherStorage {
   city: string
-  cityId?: string
+  locationId?: string
   lastUpdate: number
   data: WeatherData | null
+}
+
+export interface LocationData {
+  locationId: string
+  city: string
+  latitude: number
+  longitude: number
+  lastUpdate: number
+}
+
+export interface CityInfo {
+  id: string
+  name: string
+  adm1?: string
+  adm2?: string
+  country?: string
 }
 
 // 签到相关类型
@@ -70,6 +86,24 @@ export interface SiteAdapter {
   config?: AdapterConfig
 }
 
+// 工作相关类型
+export interface WorkSettings {
+  monthlySalary: number          // 月薪（人民币）
+  payday: number                 // 发薪日（1-31）
+  workStartHour: number          // 上班时间（小时）
+  workStartMinute: number        // 上班时间（分钟）
+  workEndHour: number            // 下班时间（小时）
+  workEndMinute: number          // 下班时间（分钟）
+  workdays: number[]             // 工作日（0-6，0=周日，6=周六）
+}
+
+export interface WorkStats {
+  timeUntilOffWork: string       // 距离下班时间
+  earnedToday: number            // 今天已赚金额
+  daysUntilPayday: number        // 距离发薪日天数
+  daysUntilWeekend: number       // 距离休息日天数
+}
+
 // 存储数据类型
 export interface StorageData {
   weather: WeatherStorage
@@ -81,4 +115,5 @@ export interface StorageData {
       randomDelay: boolean
     }
   }
+  work: WorkSettings
 }

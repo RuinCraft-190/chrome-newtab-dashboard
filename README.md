@@ -1,21 +1,25 @@
 # Chrome 新标签页仪表盘
 
-> Vue 3 + TypeScript 开发的 Chrome 浏览器扩展，提供天气显示和自动签到功能
+> Vue 3 + TypeScript 开发的 Chrome 浏览器扩展，提供天气显示、自动签到和工作统计功能
 
 ## 功能特性
 
-- 🌤️ **天气显示** - 使用和风天气 API 显示实时天气信息
-- 📅 **自动签到** - 支持 PT 站和各种网站的自动签到
-- ⚙️ **可配置设置** - 灵活的设置页面，支持自定义配置
-- 🤖 **适配器系统** - 可扩展的签到适配器，轻松添加新网站
+- 🌤️ **天气显示** - 使用和风天气 API 显示实时天气信息（支持 API Key 和 JWT 双认证）
+- 📅 **自动签到** - 支持 PT 站和各种网站的自动签到，内置适配器系统
+- 💼 **工作统计** - 实时计算今日收入、下班倒计时、发薪日倒计时
+- ⚙️ **可配置设置** - 灵活的设置页面，可视化配置所有功能
+- 🤖 **适配器系统** - 可扩展的签到适配器架构，轻松添加新网站
 - 🎨 **现代化界面** - 基于 Vue 3 的响应式设计
+- 🔒 **隐私保护** - 所有数据存储在本地，不收集任何个人信息
 
 ## 技术栈
 
-- **前端框架**: Vue 3 + TypeScript
-- **构建工具**: Vite
+- **前端框架**: Vue 3.4 + TypeScript 5.3
+- **构建工具**: Vite 5.0
+- **扩展插件**: @crxjs/vite-plugin 2.0
 - **扩展版本**: Manifest V3
-- **天气服务**: 和风天气 API
+- **天气服务**: 和风天气 V7 API
+- **代码规范**: ESLint + Prettier
 
 ## 安装使用
 
@@ -100,44 +104,79 @@ npm run build
 
 ```
 chrome-newtab-dashboard/
-├── public/                 # 静态资源
-│   └── manifest.json      # 扩展配置
+├── public/                      # 静态资源
+│   ├── icons/                   # 扩展图标
+│   ├── manifest.json           # 扩展配置（构建后）
+│   └── jwt-test.html           # JWT 测试工具
 ├── src/
-│   ├── background/        # 后台服务
-│   ├── content/           # 内容脚本
-│   │   └── adapters/      # 签到适配器
-│   ├── newtab/            # 新标签页
-│   ├── options/           # 设置页面
-│   ├── popup/             # 弹出窗口
-│   └── shared/            # 共享代码
-├── .env.example           # 环境变量模板
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
+│   ├── background/              # 后台服务（Service Worker）
+│   │   ├── index.ts            # 主入口
+│   │   ├── alarms.ts           # 定时签到任务
+│   │   ├── storage.ts          # Chrome Storage 封装
+│   │   └── weather.ts          # 和风天气 JWT 生成
+│   ├── content/                 # 内容脚本
+│   │   ├── adapters/           # 签到适配器系统
+│   │   │   ├── base.ts         # 适配器基类
+│   │   │   ├── registry.ts     # 适配器注册表
+│   │   │   ├── pt-site.ts      # PT 站通用适配器
+│   │   │   ├── generic.ts      # 通用按钮适配器
+│   │   │   └── custom/         # 自定义适配器目录
+│   │   └── utils/              # 工具函数（点击、DOM 查询）
+│   ├── newtab/                  # 新标签页界面
+│   │   ├── components/         # 卡片组件（天气、签到、工作）
+│   │   └── styles/             # 全局样式
+│   ├── options/                 # 设置页面
+│   ├── popup/                   # 弹出窗口
+│   └── shared/                  # 共享代码
+│       ├── api/                # API 封装
+│       ├── types/              # TypeScript 类型定义
+│       └── utils/              # 工具函数
+├── manifest.config.ts           # Manifest V3 配置源文件
+├── .env.example                 # 环境变量模板
+├── package.json                 # 项目配置
+├── tsconfig.json                # TypeScript 配置
+└── vite.config.ts               # Vite 构建配置
 ```
 
 ## 开发命令
 
 ```bash
-npm run dev      # 开发模式
-npm run build    # 生产构建
-npm run lint     # 代码检查
-npm run format   # 代码格式化
+npm run dev       # 开发模式（支持热重载）
+npm run build     # 生产构建
+npm run preview   # 预览构建结果
+npm run lint      # 代码检查
+npm run lint:fix  # 自动修复代码问题
+npm run format    # 代码格式化
 ```
 
 ## 常见问题
 
 ### Q: 天气不显示?
-A: 请检查是否正确配置了和风天气 API Key。
+A: 请检查以下几点：
+1. 是否正确配置了和风天气 API Key 或 JWT
+2. 浏览器控制台是否有错误信息
+3. 网络连接是否正常
+4. API 调用次数是否超限（免费版 1000 次/天）
 
 ### Q: 签到不工作?
-A:
+A: 请按以下步骤排查：
 1. 确保已登录目标网站
-2. 检查选择器是否正确
-3. 打开开发者工具查看错误日志
+2. 检查选择器是否正确（使用开发者工具验证）
+3. 打开浏览器扩展控制台查看错误日志
+4. 尝试手动刷新目标页面后重新签到
+5. 检查适配器是否与目标网站匹配
 
 ### Q: 如何添加新的签到网站?
-A: 在设置页面中添加网站配置，或开发自定义适配器。
+A: 有两种方式：
+1. **使用通用适配器**：在设置页面添加网站，配置签到按钮选择器
+2. **开发自定义适配器**：参考 [src/content/adapters/custom/README.md](src/content/adapters/custom/README.md) 开发专用适配器
+
+### Q: JWT 认证如何配置?
+A:
+1. 生成 Ed25519 密钥对：`openssl genpkey -algorithm Ed25519 -out ed25519-private.pem`
+2. 提取公钥：`openssl pkey -in ed25519-private.pem -pubout -out ed25519-public.pem`
+3. 在 `.env` 中配置 API ID 和私钥路径
+4. 参考 `public/jwt-test.html` 测试 JWT 生成
 
 ## 隐私政策
 

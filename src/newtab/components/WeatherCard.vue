@@ -62,7 +62,7 @@ const loading = ref(true)
 const error = ref('')
 const cityName = ref('')
 
-const weatherService = new QWeatherService()
+const weatherService = new QWeatherService({ authType: 'jwt' })
 
 const weatherIconUrl = computed(() => {
   if (!weather.value) return ''
@@ -81,24 +81,65 @@ async function loadWeather() {
     error.value = ''
 
     const weatherData = await storageHelper.get('weather')
+    const locationData = await storageHelper.get('location')
     const now = Date.now()
     const oneHour = 60 * 60 * 1000
+    const fiveHours = 5 * oneHour
 
+    // 优先使用缓存的位置（5小时有效）
+    let locationId = weatherData?.locationId
+    let cityDisplayName = weatherData?.city || '北京'
+
+    // 如果没有缓存的位置或超过5小时，尝试获取新位置
+    if (!locationId || !locationData || (now - locationData.lastUpdate) > fiveHours) {
+      try {
+        const position = await getCurrentPosition(fiveHours)
+        const { latitude, longitude } = position.coords
+
+        // 使用和风天气的城市查询 API 通过经纬度获取城市ID
+        // 和风天气 GeoAPI 支持经纬度查询
+        const locationStr = `${longitude.toFixed(2)},${latitude.toFixed(2)}`
+        const cities = await weatherService.searchCity(locationStr)
+
+        if (cities && cities.length > 0) {
+          locationId = cities[0].id
+          cityDisplayName = cities[0].name
+
+          // 缓存位置信息
+          await storageHelper.set('location', {
+            locationId,
+            city: cityDisplayName,
+            latitude,
+            longitude,
+            lastUpdate: now
+          })
+
+          console.log('定位成功:', cityDisplayName, locationId)
+        }
+      } catch (locError) {
+        console.log('定位失败，使用默认城市:', locError)
+      }
+    }
+
+    // 检查天气缓存（1小时有效）
     if (weatherData && weatherData.data && (now - weatherData.lastUpdate) < oneHour) {
       weather.value = weatherData.data
-      cityName.value = weatherData.city || '北京'
+      cityName.value = cityDisplayName
     } else {
-      const city = weatherData?.city || '北京'
-      const data = await weatherService.getWeatherByLocation(city)
+      // 使用城市ID获取天气
+      const location = locationId || '101010100' // 默认北京
+      const data = await weatherService.getWeatherByLocation(location)
 
+      // 保存天气数据
       await storageHelper.set('weather', {
-        city,
+        city: cityDisplayName,
+        locationId: location,
         lastUpdate: now,
         data
       })
 
       weather.value = data
-      cityName.value = city
+      cityName.value = cityDisplayName
     }
   } catch (err: any) {
     error.value = err.message || '获取天气失败'
@@ -106,6 +147,25 @@ async function loadWeather() {
   } finally {
     loading.value = false
   }
+}
+
+function getCurrentPosition(maxAge: number): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('浏览器不支持定位'))
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      resolve,
+      reject,
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: maxAge * 1000
+      }
+    )
+  })
 }
 
 onMounted(() => {
@@ -192,6 +252,7 @@ onMounted(() => {
 }
 
 .city-name {
+  font-size: 1.125rem;
   font-weight: 600;
   color: #667eea;
 }
