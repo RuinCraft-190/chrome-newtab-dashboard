@@ -10,12 +10,12 @@ export class ExampleAdapter extends BaseAdapter {
     return /https?:\/\/example\.com\/.*/.test(url)
   }
 
-  async checkLogin(): boolean {
+  async checkLogin(): Promise<boolean> {
     const userElement = querySelectorSafe('.user-name, .avatar, [class*="user"]')
     return userElement !== null
   }
 
-  async isCheckedIn(): boolean {
+  async isCheckedIn(): Promise<boolean> {
     const indicators = [
       '.checked-in',
       '.signed-in',

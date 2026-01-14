@@ -14,7 +14,7 @@ export class PTSiteAdapter extends BaseAdapter {
     return ptPatterns.some(pattern => pattern.test(url))
   }
 
-  async checkLogin(): boolean {
+  async checkLogin(): Promise<boolean> {
     const loginIndicators = [
       '.username',
       '#user-info',
@@ -29,7 +29,7 @@ export class PTSiteAdapter extends BaseAdapter {
     })
   }
 
-  async isCheckedIn(): boolean {
+  async isCheckedIn(): Promise<boolean> {
     const checkedIndicators = [
       '.signedin',
       '.signed-in',

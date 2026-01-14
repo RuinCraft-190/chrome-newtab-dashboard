@@ -22,7 +22,7 @@ export class GenericAdapter extends BaseAdapter {
     }
   }
 
-  async checkLogin(): boolean {
+  async checkLogin(): Promise<boolean> {
     if (this.config.selectors?.loginButton) {
       const loginButton = querySelectorSafe(this.config.selectors.loginButton)
       return loginButton === null
@@ -30,7 +30,7 @@ export class GenericAdapter extends BaseAdapter {
     return true
   }
 
-  async isCheckedIn(): boolean {
+  async isCheckedIn(): Promise<boolean> {
     if (this.config.selectors?.checkedIndicator) {
       const indicator = querySelectorSafe(this.config.selectors.checkedIndicator)
       return indicator !== null

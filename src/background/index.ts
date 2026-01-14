@@ -38,7 +38,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
  * @param {boolean} [message.result.alreadyChecked]
  * @param {string} [message.result.message]
  */
-async function handleCheckInSuccess(message) {
+async function handleCheckInSuccess(message: any) {
   const { siteUrl, result } = message
 
   const sites = await getCheckInSites()
@@ -69,8 +69,7 @@ async function handleCheckInSuccess(message) {
 
 async function handleGetStatus() {
   const sites = await getCheckInSites()
-  /** @type {Object} */
-  const records = {}
+  const records: Record<string, any> = {}
 
   for (const site of sites) {
     const record = await getCheckInRecord(site.id)

@@ -3,10 +3,10 @@ import { STORAGE_KEY } from '@shared/constants'
 
 async function getStorageData(): Promise<StorageData> {
   return new Promise((resolve) => {
-    chrome.storage.local.get(null, (result) => {
+    chrome.storage.local.get(null, (result: any) => {
       resolve({
         weather: result.weather || { city: '北京', lastUpdate: 0, data: null },
-        checkIn: result.checkin || {
+        checkIn: result.checkIn || {
           sites: [],
           records: {},
           globalSettings: {
@@ -33,7 +33,7 @@ export async function getCheckInSites(): Promise<SiteConfig[]> {
 export async function saveCheckInSites(sites: SiteConfig[]): Promise<void> {
   const data = await getStorageData()
   data.checkIn.sites = sites
-  await setStorageData({ checkin: data.checkIn })
+  await setStorageData({ checkIn: data.checkIn })
 }
 
 export async function addCheckInSite(site: SiteConfig): Promise<void> {
@@ -71,7 +71,7 @@ export async function getCheckInRecords(): Promise<Record<string, CheckInRecord>
 export async function updateCheckInRecord(siteId: string, record: CheckInRecord): Promise<void> {
   const data = await getStorageData()
   data.checkIn.records[siteId] = record
-  await setStorageData({ checkin: data.checkIn })
+  await setStorageData({ checkIn: data.checkIn })
 }
 
 export async function getGlobalSettings() {
@@ -82,5 +82,5 @@ export async function getGlobalSettings() {
 export async function updateGlobalSettings(settings: any): Promise<void> {
   const data = await getStorageData()
   data.checkIn.globalSettings = { ...data.checkIn.globalSettings, ...settings }
-  await setStorageData({ checkin: data.checkIn })
+  await setStorageData({ checkIn: data.checkIn })
 }
