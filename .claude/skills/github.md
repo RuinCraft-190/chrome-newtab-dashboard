@@ -36,3 +36,48 @@ README.md 应包含：
 - 技术栈
 - 贡献指南
 - 许可证信息
+
+## Git 提交规范
+
+**重要：每次提交到 GitHub 时必须遵循以下规则：**
+
+### 提交前
+1. 先同步最新代码：
+   ```bash
+   git pull origin main
+   ```
+
+### 提交时
+1. 提交信息格式（不含 Co-Authored-By）：
+   ```bash
+   git commit -m "类型: 简短描述
+
+   详细说明（可选）"
+   ```
+
+2. 提交类型（使用 Conventional Commits 规范）：
+   - `feat:` 新功能
+   - `fix:` 修复问题
+   - `docs:` 文档更新
+   - `style:` 代码格式调整
+   - `refactor:` 代码重构
+   - `perf:` 性能优化
+   - `test:` 测试相关
+   - `chore:` 构建/工具更新
+
+3. **禁止**在提交信息中包含 `Co-Authored-By: Claude` 或类似的署名
+
+### 提交后
+1. 推送到远程：
+   ```bash
+   git push origin main
+   ```
+
+### 示例
+```bash
+# 正确的提交流程
+git pull origin main
+git add .
+git commit -m "feat: 添加城市搜索功能"
+git push origin main
+```
