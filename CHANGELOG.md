@@ -38,7 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 - 天气信息展示（温度、体感温度、湿度、风速等）
 - 城市搜索和选择功能
-- 签到功能（支持 PT 站和通用网站）
 - 工作日和薪资计算
 - 新标签页仪表板
 - 扩展设置页面

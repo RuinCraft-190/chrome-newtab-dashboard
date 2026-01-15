@@ -35,7 +35,7 @@
     <div class="dashboard">
       <WeatherCard />
       <WorkCard />
-      <CheckInCard />
+      <!-- <CheckInCard /> -->
     </div>
   </div>
 </template>

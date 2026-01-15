@@ -15,7 +15,7 @@
       <div class="header-content">
         <div class="header-icon">⚙️</div>
         <h1>扩展设置</h1>
-        <p>配置天气和签到功能</p>
+        <p>配置天气功能</p>
       </div>
     </header>
 
@@ -96,7 +96,7 @@
       </section>
 
       <!-- 签到设置 -->
-      <section v-if="activeTab === 'checkin'" class="tab-panel">
+      <!-- <section v-if="activeTab === 'checkin'" class="tab-panel">
         <div class="panel-section">
           <div class="section-header">
             <div class="section-title">
@@ -188,7 +188,7 @@
             </label>
           </div>
         </div>
-      </section>
+      </section> -->
 
       <!-- 工作设置 -->
       <section v-if="activeTab === 'work'" class="tab-panel">
@@ -301,7 +301,8 @@
       </section>
     </main>
 
-    <div v-if="showAddSiteModal" class="modal-overlay" @click.self="showAddSiteModal = false">
+    <!-- 添加网站模态框 -->
+    <!-- <div v-if="showAddSiteModal" class="modal-overlay" @click.self="showAddSiteModal = false">
       <div class="modal">
         <div class="modal-header">
           <div class="modal-title">
@@ -358,7 +359,7 @@
           </button>
         </div>
       </div>
-    </div>
+    </div> -->
   </div>
 </template>
 
@@ -366,11 +367,11 @@
 import { ref, onMounted } from 'vue'
 import type { SiteConfig } from '@shared/types'
 import {
-  addCheckInSite,
-  removeCheckInSite,
-  updateCheckInSite,
+  // addCheckInSite,
+  // removeCheckInSite,
+  // updateCheckInSite,
   getGlobalSettings as fetchGlobalSettings,
-  updateGlobalSettings
+  // updateGlobalSettings
 } from '@background/storage'
 import { QWeatherService } from '@shared/api/weather'
 
@@ -392,12 +393,12 @@ let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const weatherService = new QWeatherService({ authType: 'jwt' })
 
-// 签到配置
-const sites = ref<SiteConfig[]>([])
-const globalSettings = ref({
-  defaultSchedule: '09:00',
-  randomDelay: true
-})
+// // 签到配置
+// const sites = ref<SiteConfig[]>([])
+// const globalSettings = ref({
+//   defaultSchedule: '09:00',
+//   randomDelay: true
+// })
 
 // 工作配置
 const workSettings = ref({
@@ -410,13 +411,13 @@ const workSettings = ref({
   workdays: [1, 2, 3, 4, 5]
 })
 
-const showAddSiteModal = ref(false)
-const newSite = ref({
-  name: '',
-  url: '',
-  adapterType: 'pt' as 'pt' | 'generic',
-  checkInButton: ''
-})
+// const showAddSiteModal = ref(false)
+// const newSite = ref({
+//   name: '',
+//   url: '',
+//   adapterType: 'pt' as 'pt' | 'generic',
+//   checkInButton: ''
+// })
 
 const weekDays = [
   { value: 0, label: '周日' },
@@ -440,10 +441,10 @@ async function loadData() {
     citySearchQuery.value = result.weatherSettings.cityName || ''
   }
 
-  // 加载签到配置
-  if (result.checkin?.sites) {
-    sites.value = result.checkin.sites
-  }
+  // // 加载签到配置
+  // if (result.checkin?.sites) {
+  //   sites.value = result.checkin.sites
+  // }
 
   // 加载工作配置
   if (result.work) {
@@ -472,8 +473,8 @@ async function loadData() {
     console.log('Merged work settings:', workSettings.value)
   }
 
-  const settings = await fetchGlobalSettings()
-  globalSettings.value = settings
+  // const settings = await fetchGlobalSettings()
+  // globalSettings.value = settings
 }
 
 // 城市搜索功能
@@ -537,62 +538,62 @@ async function clearCity() {
   await chrome.storage.local.remove('weatherSettings')
 }
 
-async function addSite() {
-  if (!newSite.value.name || !newSite.value.url) {
-    alert('请填写网站名称和URL')
-    return
-  }
+// async function addSite() {
+//   if (!newSite.value.name || !newSite.value.url) {
+//     alert('请填写网站名称和URL')
+//     return
+//   }
 
-  const site: SiteConfig = {
-    id: Date.now().toString(),
-    name: newSite.value.name,
-    url: newSite.value.url,
-    enabled: true,
-    adapterType: newSite.value.adapterType,
-    adapterConfig: newSite.value.adapterType === 'generic' ? {
-      urlPattern: newSite.value.url.replace(/https?:\/\/([^\/]+).*/, '$1'),
-      selectors: {
-        checkInButton: newSite.value.checkInButton
-      }
-    } : undefined
-  }
+//   const site: SiteConfig = {
+//     id: Date.now().toString(),
+//     name: newSite.value.name,
+//     url: newSite.value.url,
+//     enabled: true,
+//     adapterType: newSite.value.adapterType,
+//     adapterConfig: newSite.value.adapterType === 'generic' ? {
+//       urlPattern: newSite.value.url.replace(/https?:\/\/([^\/]+).*/, '$1'),
+//       selectors: {
+//         checkInButton: newSite.value.checkInButton
+//       }
+//     } : undefined
+//   }
 
-  await addCheckInSite(site)
-  sites.value.push(site)
-  showAddSiteModal.value = false
+//   await addCheckInSite(site)
+//   sites.value.push(site)
+//   showAddSiteModal.value = false
 
-  newSite.value = {
-    name: '',
-    url: '',
-    adapterType: 'pt',
-    checkInButton: ''
-  }
+//   newSite.value = {
+//     name: '',
+//     url: '',
+//     adapterType: 'pt',
+//     checkInButton: ''
+//   }
 
-  chrome.runtime.sendMessage({ action: 'RELOAD_ADAPTERS' })
-}
+//   chrome.runtime.sendMessage({ action: 'RELOAD_ADAPTERS' })
+// }
 
-async function toggleSite(siteId: string) {
-  const site = sites.value.find(s => s.id === siteId)
-  if (site) {
-    site.enabled = !site.enabled
-    await updateCheckInSite(siteId, { enabled: site.enabled })
-  }
-}
+// async function toggleSite(siteId: string) {
+//   const site = sites.value.find(s => s.id === siteId)
+//   if (site) {
+//     site.enabled = !site.enabled
+//     await updateCheckInSite(siteId, { enabled: site.enabled })
+//   }
+// }
 
-async function updateSite(siteId: string, updates: Partial<SiteConfig>) {
-  await updateCheckInSite(siteId, updates)
-}
+// async function updateSite(siteId: string, updates: Partial<SiteConfig>) {
+//   await updateCheckInSite(siteId, updates)
+// }
 
-async function confirmDeleteSite(site: SiteConfig) {
-  if (confirm(`确定要删除 "${site.name}" 吗?`)) {
-    await removeCheckInSite(site.id)
-    sites.value = sites.value.filter(s => s.id !== site.id)
-  }
-}
+// async function confirmDeleteSite(site: SiteConfig) {
+//   if (confirm(`确定要删除 "${site.name}" 吗?`)) {
+//     await removeCheckInSite(site.id)
+//     sites.value = sites.value.filter(s => s.id !== site.id)
+//   }
+// }
 
-async function saveGlobalSettings() {
-  await updateGlobalSettings(globalSettings.value)
-}
+// async function saveGlobalSettings() {
+//   await updateGlobalSettings(globalSettings.value)
+// }
 
 async function saveWorkSettings() {
   console.log('Saving work settings:', workSettings.value)
