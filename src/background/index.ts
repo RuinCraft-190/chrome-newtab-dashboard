@@ -113,3 +113,8 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onStartup.addListener(() => {
   console.log('Browser started, extension loaded')
 })
+
+// Handle extension icon click - open new tab
+chrome.action.onClicked.addListener(() => {
+  chrome.tabs.create({ url: 'chrome://newtab' })
+})

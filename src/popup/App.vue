@@ -32,7 +32,10 @@ function openSettings() {
 
 <style scoped>
 .popup {
-  width: 280px;
+  width: 320px;
+  min-height: 200px;
+  background: white;
+  overflow: visible;
 }
 
 .popup-header {

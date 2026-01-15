@@ -18,7 +18,6 @@ export default defineManifest({
     type: 'module'
   },
   action: {
-    default_popup: 'src/popup/index.html',
     default_icon: {
       '16': 'icons/icon16.png',
       '48': 'icons/icon48.png'
