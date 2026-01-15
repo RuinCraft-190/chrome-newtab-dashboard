@@ -4,16 +4,17 @@ import { STORAGE_KEY } from '@shared/constants'
 export class StorageHelper {
   async get(key: keyof StorageData): Promise<any> {
     return new Promise((resolve) => {
-      chrome.storage.local.get(STORAGE_KEY[key.toUpperCase() as keyof typeof STORAGE_KEY], (result) => {
-        resolve(result[STORAGE_KEY[key.toUpperCase() as keyof typeof STORAGE_KEY]])
+      // 直接使用 key 作为存储键，不通过 STORAGE_KEY 映射
+      chrome.storage.local.get(key, (result) => {
+        resolve(result[key])
       })
     })
   }
 
   async set(key: keyof StorageData, value: any): Promise<void> {
     return new Promise((resolve) => {
-      const storageKey = STORAGE_KEY[key.toUpperCase() as keyof typeof STORAGE_KEY]
-      chrome.storage.local.set({ [storageKey]: value }, () => resolve())
+      // 直接使用 key 作为存储键，不通过 STORAGE_KEY 映射
+      chrome.storage.local.set({ [key]: value }, () => resolve())
     })
   }
 
@@ -22,6 +23,7 @@ export class StorageHelper {
       chrome.storage.local.get(null, (result) => {
         resolve({
           weather: result.weather || { city: '北京', lastUpdate: 0, data: null },
+          weatherSettings: result.weatherSettings || { locationId: '101010100', cityName: '北京' },
           checkIn: result.checkin || {
             sites: [],
             records: {},

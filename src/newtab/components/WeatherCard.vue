@@ -52,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { QWeatherService } from '@shared/api/weather'
 import storageHelper from '@shared/utils/storage'
 import type { WeatherData } from '@shared/types'
@@ -63,6 +63,10 @@ const error = ref('')
 const cityName = ref('')
 
 const weatherService = new QWeatherService({ authType: 'jwt' })
+
+// 天气缓存：2小时有效
+const CACHE_DURATION = 2 * 60 * 60 * 1000 // 2小时
+let cachedData: { data: WeatherData; locationId: string; city: string; timestamp: number } | null = null
 
 const weatherIconUrl = computed(() => {
   if (!weather.value) return ''
@@ -80,67 +84,36 @@ async function loadWeather() {
     loading.value = true
     error.value = ''
 
-    const weatherData = await storageHelper.get('weather')
-    const locationData = await storageHelper.get('location')
     const now = Date.now()
-    const oneHour = 60 * 60 * 1000
-    const fiveHours = 5 * oneHour
 
-    // 优先使用缓存的位置（5小时有效）
-    let locationId = weatherData?.locationId
-    let cityDisplayName = weatherData?.city || '北京'
-
-    // 如果没有缓存的位置或超过5小时，尝试获取新位置
-    if (!locationId || !locationData || (now - locationData.lastUpdate) > fiveHours) {
-      try {
-        const position = await getCurrentPosition(fiveHours)
-        const { latitude, longitude } = position.coords
-
-        // 使用和风天气的城市查询 API 通过经纬度获取城市ID
-        // 和风天气 GeoAPI 支持经纬度查询
-        const locationStr = `${longitude.toFixed(2)},${latitude.toFixed(2)}`
-        const cities = await weatherService.searchCity(locationStr)
-
-        if (cities && cities.length > 0) {
-          locationId = cities[0].id
-          cityDisplayName = cities[0].name
-
-          // 缓存位置信息
-          await storageHelper.set('location', {
-            locationId,
-            city: cityDisplayName,
-            latitude,
-            longitude,
-            lastUpdate: now
-          })
-
-          console.log('定位成功:', cityDisplayName, locationId)
-        }
-      } catch (locError) {
-        console.log('定位失败，使用默认城市:', locError)
-      }
+    // 检查缓存是否有效
+    if (cachedData && (now - cachedData.timestamp) < CACHE_DURATION) {
+      console.log('使用缓存的天气数据')
+      weather.value = cachedData.data
+      cityName.value = cachedData.city
+      loading.value = false
+      return
     }
 
-    // 检查天气缓存（1小时有效）
-    if (weatherData && weatherData.data && (now - weatherData.lastUpdate) < oneHour) {
-      weather.value = weatherData.data
-      cityName.value = cityDisplayName
-    } else {
-      // 使用城市ID获取天气
-      const location = locationId || '101010100' // 默认北京
-      const data = await weatherService.getWeatherByLocation(location)
+    // 从存储中获取用户设置的城市
+    const settings = await storageHelper.get('weatherSettings')
+    const locationId = settings?.locationId || '101010100' // 默认北京
+    const defaultCityName = settings?.cityName || '北京'
 
-      // 保存天气数据
-      await storageHelper.set('weather', {
-        city: cityDisplayName,
-        locationId: location,
-        lastUpdate: now,
-        data
-      })
+    console.log('使用城市ID查询天气:', locationId)
 
-      weather.value = data
-      cityName.value = cityDisplayName
+    const data = await weatherService.getWeatherByLocation(locationId)
+    cityName.value = defaultCityName
+
+    // 更新缓存
+    cachedData = {
+      data,
+      locationId,
+      city: cityName.value,
+      timestamp: now
     }
+
+    weather.value = data
   } catch (err: any) {
     error.value = err.message || '获取天气失败'
     console.error('Failed to load weather:', err)
@@ -149,27 +122,25 @@ async function loadWeather() {
   }
 }
 
-function getCurrentPosition(maxAge: number): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('浏览器不支持定位'))
-      return
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      resolve,
-      reject,
-      {
-        enableHighAccuracy: false,
-        timeout: 10000,
-        maximumAge: maxAge * 1000
-      }
-    )
-  })
-}
-
 onMounted(() => {
   loadWeather()
+
+  // 监听存储变化，当天气设置更新时重新加载
+  const storageListener = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+    if (areaName === 'local' && changes.weatherSettings) {
+      console.log('检测到天气设置变化，重新加载天气')
+      // 清除缓存以强制重新获取
+      cachedData = null
+      loadWeather()
+    }
+  }
+
+  chrome.storage.onChanged.addListener(storageListener)
+
+  // 组件卸载时移除监听器
+  onBeforeUnmount(() => {
+    chrome.storage.onChanged.removeListener(storageListener)
+  })
 })
 </script>
 
