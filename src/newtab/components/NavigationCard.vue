@@ -8,13 +8,14 @@
         target="_blank"
         class="nav-card"
         :title="item.name"
+        @contextmenu.prevent="handleContextMenu($event, item)"
       >
         <div class="nav-icon">
           <img v-if="item.icon" :src="item.icon" :alt="item.name" @error="handleIconError($event, item)" />
           <span v-else class="default-icon">{{ getInitials(item.name) }}</span>
         </div>
         <span class="nav-name">{{ item.name }}</span>
-        <button class="delete-btn" @click.prevent="removeItem(item.id)" title="删除">
+        <button class="delete-btn" @click.prevent.stop="removeItem(item.id)" title="删除">
           ×
         </button>
       </a>
@@ -26,11 +27,11 @@
       </div>
     </button>
 
-    <!-- 添加导航对话框 -->
+    <!-- 添加/编辑导航对话框 -->
     <div class="dialog-overlay" v-if="showAddDialog" @click.self="showAddDialog = false">
       <div class="dialog">
-        <h3>添加网页导航</h3>
-        <form @submit.prevent="addNavigation">
+        <h3>{{ isEditing ? '编辑网页导航' : '添加网页导航' }}</h3>
+        <form @submit.prevent="isEditing ? updateNavigation() : addNavigation()">
           <div class="form-group">
             <label for="navName">名称</label>
             <input
@@ -58,9 +59,9 @@
             </div>
           </div>
           <div class="dialog-actions">
-            <button type="button" class="btn-cancel" @click="showAddDialog = false">取消</button>
+            <button type="button" class="btn-cancel" @click="cancelDialog">取消</button>
             <button type="submit" class="btn-confirm" :disabled="isAdding">
-              {{ isAdding ? '添加中...' : '添加' }}
+              {{ isAdding ? (isEditing ? '保存中...' : '添加中...') : (isEditing ? '保存' : '添加') }}
             </button>
           </div>
         </form>
@@ -70,13 +71,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import type { NavigationItem } from '@shared/types'
 import storage from '@shared/utils/storage'
+
+// 定义 emit
+const emit = defineEmits<{
+  (e: 'navigation-contextmenu', event: MouseEvent, item: NavigationItem): void
+}>()
 
 const navigationItems = ref<NavigationItem[]>([])
 const showAddDialog = ref(false)
 const isAdding = ref(false)
+const isEditing = ref(false)
+const editingItemId = ref<string | null>(null)
 const previewIcon = ref<string>()
 
 const newItem = ref({
@@ -86,7 +94,45 @@ const newItem = ref({
 
 onMounted(() => {
   loadNavigation()
+  setupEventListeners()
 })
+
+onBeforeUnmount(() => {
+  removeEventListeners()
+})
+
+function setupEventListeners() {
+  window.addEventListener('add-navigation', onAddNavigationEvent)
+  window.addEventListener('edit-navigation', onEditNavigationEvent)
+  window.addEventListener('delete-navigation', onDeleteNavigationEvent)
+}
+
+function removeEventListeners() {
+  window.removeEventListener('add-navigation', onAddNavigationEvent)
+  window.removeEventListener('edit-navigation', onEditNavigationEvent)
+  window.removeEventListener('delete-navigation', onDeleteNavigationEvent)
+}
+
+// 处理右键菜单
+function handleContextMenu(event: MouseEvent, item: NavigationItem) {
+  emit('navigation-contextmenu', event, item)
+}
+
+// 事件处理函数
+function onAddNavigationEvent() {
+  resetForm()
+  showAddDialog.value = true
+}
+
+function onEditNavigationEvent(event: CustomEvent) {
+  const item = event.detail
+  startEditing(item)
+}
+
+function onDeleteNavigationEvent(event: CustomEvent) {
+  const item = event.detail
+  removeItem(item.id)
+}
 
 async function loadNavigation() {
   const data = await storage.get('navigation')
@@ -129,9 +175,38 @@ async function addNavigation() {
   await storage.set('navigation', { items })
   navigationItems.value = items
 
-  // 重置表单
-  newItem.value = { name: '', url: '' }
-  previewIcon.value = undefined
+  resetForm()
+  showAddDialog.value = false
+  isAdding.value = false
+}
+
+async function updateNavigation() {
+  if (!newItem.value.name || !newItem.value.url || !editingItemId.value) return
+
+  isAdding.value = true
+
+  let url = newItem.value.url.trim()
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://' + url
+  }
+
+  const data = await storage.get('navigation')
+  const items = data?.items || []
+  const index = items.findIndex((item: NavigationItem) => item.id === editingItemId.value)
+
+  if (index !== -1) {
+    items[index] = {
+      ...items[index],
+      name: newItem.value.name.trim(),
+      url,
+      icon: previewIcon.value || await fetchFavicon(url)
+    }
+
+    await storage.set('navigation', { items })
+    navigationItems.value = items
+  }
+
+  resetForm()
   showAddDialog.value = false
   isAdding.value = false
 }
@@ -144,6 +219,30 @@ async function removeItem(id: string) {
 
   await storage.set('navigation', { items })
   navigationItems.value = items
+}
+
+function startEditing(item: NavigationItem) {
+  isEditing.value = true
+  editingItemId.value = item.id
+  newItem.value = {
+    name: item.name,
+    url: item.url
+  }
+  previewIcon.value = item.icon
+  showAddDialog.value = true
+}
+
+function cancelDialog() {
+  resetForm()
+  showAddDialog.value = false
+}
+
+function resetForm() {
+  isEditing.value = false
+  editingItemId.value = null
+  newItem.value = { name: '', url: '' }
+  previewIcon.value = undefined
+  isAdding.value = false
 }
 
 async function fetchFavicon(url: string): Promise<string | undefined> {

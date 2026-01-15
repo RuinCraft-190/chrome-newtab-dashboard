@@ -66,6 +66,8 @@ const weatherService = new QWeatherService({ authType: 'jwt' })
 
 // 天气缓存：2小时有效
 const CACHE_DURATION = 2 * 60 * 60 * 1000 // 2小时
+// 刷新限制：在缓存期最后10分钟内才允许刷新
+const REFRESH_COOLDOWN = 10 * 60 * 1000 // 10分钟
 let cachedData: { data: WeatherData; locationId: string; city: string; timestamp: number } | null = null
 
 const weatherIconUrl = computed(() => {
@@ -79,15 +81,39 @@ const formattedUpdateTime = computed(() => {
   return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 })
 
-async function loadWeather() {
+// 检查是否可以刷新天气
+function canRefreshWeather(): boolean {
+  if (!cachedData) return true
+
+  const now = Date.now()
+  const elapsed = now - cachedData.timestamp
+  const remaining = CACHE_DURATION - elapsed
+
+  // 只有在缓存期剩余10分钟以内时才允许刷新
+  return remaining <= REFRESH_COOLDOWN
+}
+
+// 获取距离可刷新的剩余时间（分钟）
+function getRefreshCooldownMinutes(): number {
+  if (!cachedData) return 0
+
+  const now = Date.now()
+  const elapsed = now - cachedData.timestamp
+  const remaining = CACHE_DURATION - elapsed
+  const cooldownRemaining = remaining - REFRESH_COOLDOWN
+
+  return Math.max(0, Math.ceil(cooldownRemaining / 60000))
+}
+
+async function loadWeather(forceRefresh = false) {
   try {
     loading.value = true
     error.value = ''
 
     const now = Date.now()
 
-    // 检查缓存是否有效
-    if (cachedData && (now - cachedData.timestamp) < CACHE_DURATION) {
+    // 检查缓存是否有效（除非强制刷新）
+    if (!forceRefresh && cachedData && (now - cachedData.timestamp) < CACHE_DURATION) {
       console.log('使用缓存的天气数据')
       weather.value = cachedData.data
       cityName.value = cachedData.city
@@ -122,6 +148,19 @@ async function loadWeather() {
   }
 }
 
+// 刷新天气（带时间限制检查）
+function refreshWeather() {
+  if (!canRefreshWeather()) {
+    const minutes = getRefreshCooldownMinutes()
+    alert(`刷新过于频繁，请等待 ${minutes} 分钟后再试`)
+    return
+  }
+
+  // 清除缓存并重新加载
+  cachedData = null
+  loadWeather(true)
+}
+
 onMounted(() => {
   loadWeather()
 
@@ -137,10 +176,23 @@ onMounted(() => {
 
   chrome.storage.onChanged.addListener(storageListener)
 
+  // 监听来自父组件的刷新事件
+  const refreshHandler = () => {
+    refreshWeather()
+  }
+  window.addEventListener('refresh-weather', refreshHandler)
+
   // 组件卸载时移除监听器
   onBeforeUnmount(() => {
     chrome.storage.onChanged.removeListener(storageListener)
+    window.removeEventListener('refresh-weather', refreshHandler)
   })
+})
+
+// 暴露方法供父组件调用
+defineExpose({
+  refreshWeather,
+  canRefreshWeather
 })
 </script>
 

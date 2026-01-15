@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+  <div class="container" @contextmenu.prevent="showContainerContextMenu">
     <!-- 新 Hero Header -->
     <div class="hero-header">
       <!-- 左侧面板：时间和日期 -->
@@ -33,10 +33,49 @@
     </div>
 
     <div class="dashboard">
-      <WeatherCard />
+      <WeatherCard @contextmenu.prevent="handleWeatherContextMenu" />
       <WorkCard />
-      <NavigationCard />
+      <NavigationCard @navigation-contextmenu="handleNavigationContextMenu" />
       <!-- <CheckInCard /> -->
+    </div>
+
+    <!-- 右键菜单 -->
+    <div
+      v-if="contextMenu.visible"
+      class="context-menu"
+      :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+    >
+      <!-- 空白区域菜单 -->
+      <template v-if="contextMenu.type === 'container'">
+        <div class="context-menu-item" @click="onAddNavigation">
+          <span class="menu-icon">➕</span>
+          新建网站导航
+        </div>
+      </template>
+
+      <!-- 导航卡片菜单 -->
+      <template v-if="contextMenu.type === 'navigation'">
+        <div class="context-menu-item" @click="onEditNavigation">
+          <span class="menu-icon">✏️</span>
+          编辑
+        </div>
+        <div class="context-menu-item danger" @click="onDeleteNavigation">
+          <span class="menu-icon">🗑️</span>
+          删除
+        </div>
+      </template>
+
+      <!-- 天气卡片菜单 -->
+      <template v-if="contextMenu.type === 'weather'">
+        <div class="context-menu-item" @click="onRefreshWeather">
+          <span class="menu-icon">🔄</span>
+          刷新天气
+        </div>
+        <div class="context-menu-item" @click="onChangeCity">
+          <span class="menu-icon">🏙️</span>
+          切换城市
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -45,12 +84,101 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import WeatherCard from './components/WeatherCard.vue'
 import WorkCard from './components/WorkCard.vue'
-import CheckInCard from './components/CheckInCard.vue'
 import NavigationCard from './components/NavigationCard.vue'
 
 const realTime = ref('')
 const dateDisplay = ref('')
 const progress = ref(0)
+
+// 右键菜单状态
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  type: '' // 'container' | 'navigation' | 'weather'
+})
+const contextMenuItem = ref<any>(null)
+
+// 显示容器（空白区域）右键菜单
+function showContainerContextMenu(event: MouseEvent) {
+  // 检查点击的是否是空白区域（不是卡片）
+  const target = event.target as HTMLElement
+  const isCard = target.closest('.card') || target.closest('.nav-card')
+
+  if (!isCard) {
+    showContextMenu(event, 'container')
+  }
+}
+
+// 显示右键菜单
+function showContextMenu(event: MouseEvent, type: string, item: any = null) {
+  event.preventDefault()
+  event.stopPropagation()
+
+  contextMenuItem.value = item
+  contextMenu.value = {
+    visible: true,
+    x: event.clientX,
+    y: event.clientY,
+    type
+  }
+
+  // 点击其他地方关闭菜单
+  document.addEventListener('click', closeContextMenu)
+  document.addEventListener('contextmenu', closeContextMenu)
+}
+
+// 关闭右键菜单
+function closeContextMenu() {
+  contextMenu.value.visible = false
+  document.removeEventListener('click', closeContextMenu)
+  document.removeEventListener('contextmenu', closeContextMenu)
+}
+
+// 处理导航卡片的右键菜单
+function handleNavigationContextMenu(event: MouseEvent, item: any) {
+  showContextMenu(event, 'navigation', item)
+}
+
+// 处理天气卡片的右键菜单
+function handleWeatherContextMenu(event: MouseEvent) {
+  showContextMenu(event, 'weather')
+}
+
+// 菜单操作：新建导航
+function onAddNavigation() {
+  // 通过事件通知 NavigationCard 组件
+  const event = new CustomEvent('add-navigation')
+  window.dispatchEvent(event)
+  closeContextMenu()
+}
+
+// 菜单操作：编辑导航
+function onEditNavigation() {
+  const event = new CustomEvent('edit-navigation', { detail: contextMenuItem.value })
+  window.dispatchEvent(event)
+  closeContextMenu()
+}
+
+// 菜单操作：删除导航
+function onDeleteNavigation() {
+  const event = new CustomEvent('delete-navigation', { detail: contextMenuItem.value })
+  window.dispatchEvent(event)
+  closeContextMenu()
+}
+
+// 菜单操作：刷新天气
+function onRefreshWeather() {
+  const event = new CustomEvent('refresh-weather')
+  window.dispatchEvent(event)
+  closeContextMenu()
+}
+
+// 菜单操作：切换城市
+function onChangeCity() {
+  chrome.runtime.openOptionsPage()
+  closeContextMenu()
+}
 
 function updateTime() {
   const now = new Date()
@@ -386,5 +514,56 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;
+}
+
+/* 右键菜单样式 */
+.context-menu {
+  position: fixed;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  padding: 8px 0;
+  min-width: 180px;
+  z-index: 10000;
+  animation: contextMenuFadeIn 0.15s ease-out;
+}
+
+@keyframes contextMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.context-menu-item:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+}
+
+.context-menu-item.danger:hover {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+}
+
+.menu-icon {
+  font-size: 1.1rem;
+  width: 20px;
+  text-align: center;
 }
 </style>
