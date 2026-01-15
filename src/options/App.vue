@@ -8,9 +8,15 @@
     </div>
 
     <header class="page-header">
-      <div class="header-icon">⚙️</div>
-      <h1>扩展设置</h1>
-      <p>配置天气和签到功能</p>
+      <button class="back-button" @click="goBack" title="返回新标签页">
+        <span class="back-icon">←</span>
+        <span class="back-text">返回</span>
+      </button>
+      <div class="header-content">
+        <div class="header-icon">⚙️</div>
+        <h1>扩展设置</h1>
+        <p>配置天气和签到功能</p>
+      </div>
     </header>
 
     <nav class="tabs-nav">
@@ -371,7 +377,7 @@ import { QWeatherService } from '@shared/api/weather'
 // 标签页配置
 const tabs = ref([
   { id: 'weather', label: '天气设置', icon: '🌤️' },
-  { id: 'checkin', label: '签到设置', icon: '📋' },
+  // { id: 'checkin', label: '签到设置', icon: '📋' },
   { id: 'work', label: '工作设置', icon: '💼' }
 ])
 const activeTab = ref('weather')
@@ -605,6 +611,10 @@ function toggleWorkday(day: number) {
   saveWorkSettings()
 }
 
+function goBack() {
+  chrome.tabs.create({ url: 'chrome://newtab' })
+}
+
 onMounted(() => {
   loadData()
 })
@@ -613,11 +623,11 @@ onMounted(() => {
 <style scoped>
 /* ==================== 基础样式 ==================== */
 .options-page {
-  min-height: 100vh;
+  height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+  padding: 20px 20px 0 20px;
   position: relative;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 /* 背景装饰 */
@@ -674,10 +684,45 @@ onMounted(() => {
 
 /* 页面头部 */
 .page-header {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 20px;
   margin-bottom: 30px;
   position: relative;
   z-index: 1;
+}
+
+/* 返回按钮 */
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #667eea;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+.back-button:hover {
+  background: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.back-icon {
+  font-size: 1.25rem;
+}
+
+.header-content {
+  flex: 1;
+  text-align: center;
 }
 
 .header-icon {
@@ -799,6 +844,31 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  max-height: calc(100vh - 330px);
+  overflow-y: auto;
+  padding-right: 8px;
+
+  /* 美化滚动条 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(102, 126, 234, 0.5) transparent;
+}
+
+.tab-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tab-panel::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.tab-panel::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.5);
+  border-radius: 4px;
+}
+
+.tab-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.7);
 }
 
 .panel-section {
@@ -1589,6 +1659,21 @@ onMounted(() => {
 
 /* ==================== 响应式 ==================== */
 @media (max-width: 640px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .back-button {
+    align-self: flex-start;
+  }
+
+  .header-content {
+    text-align: left;
+    width: 100%;
+  }
+
   .tabs-nav {
     flex-wrap: wrap;
   }
@@ -1637,7 +1722,7 @@ onMounted(() => {
   border: 2px solid #e2e8f0;
   border-radius: 10px;
   background: white;
-  max-height: 300px;
+  max-height: 200px;
   overflow-y: auto;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
