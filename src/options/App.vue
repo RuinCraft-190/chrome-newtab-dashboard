@@ -31,136 +31,61 @@
       <section v-if="activeTab === 'weather'" class="tab-panel">
         <div class="panel-section">
           <div class="section-title">
-            <span class="section-icon">🔐</span>
-            <h2>认证方式</h2>
-          </div>
-          <div class="radio-group">
-            <label class="radio-label" :class="{ checked: authType === 'apikey' }">
-              <input type="radio" v-model="authType" value="apikey" @change="saveAuthType" />
-              <span class="radio-card">
-                <span class="radio-icon">🔑</span>
-                <span class="radio-text">
-                  <span class="radio-title">API Key</span>
-                  <span class="radio-desc">简单快速</span>
-                </span>
-              </span>
-            </label>
-            <label class="radio-label" :class="{ checked: authType === 'jwt' }">
-              <input type="radio" v-model="authType" value="jwt" @change="saveAuthType" />
-              <span class="radio-card">
-                <span class="radio-icon">🛡️</span>
-                <span class="radio-text">
-                  <span class="radio-title">JWT 认证</span>
-                  <span class="radio-desc">推荐使用</span>
-                </span>
-              </span>
-            </label>
-          </div>
-        </div>
-
-        <div class="panel-section">
-          <div class="section-title">
             <span class="section-icon">🏙️</span>
             <h2>城市设置</h2>
           </div>
           <div class="form-group">
-            <label>城市名称</label>
+            <label>搜索城市</label>
             <div class="input-wrapper">
               <input
-                v-model="weatherCity"
+                v-model="citySearchQuery"
                 type="text"
-                placeholder="输入城市名称，如：北京"
-                @blur="saveWeatherCity"
+                placeholder="输入城市名称搜索，如：宁波"
+                @input="onCitySearchInput"
+                @focus="showCityResults = true"
               />
-              <span class="input-icon">📍</span>
+              <span class="input-icon">🔍</span>
             </div>
+            <small>输入城市名称进行搜索，从结果中选择</small>
           </div>
-        </div>
 
-        <div v-if="authType === 'apikey'" class="panel-section">
-          <div class="section-title">
-            <span class="section-icon">🔑</span>
-            <h2>API Key 配置</h2>
-          </div>
-          <div class="form-group">
-            <label>和风天气 API Key</label>
-            <div class="input-wrapper">
-              <input
-                v-model="weatherApiKey"
-                type="password"
-                placeholder="输入你的 API Key"
-                @blur="saveWeatherApiKey"
-              />
-              <span class="input-icon">🗝️</span>
+          <!-- 搜索结果列表 -->
+          <div v-if="showCityResults && citySearchResults.length > 0" class="city-search-results">
+            <div
+              v-for="city in citySearchResults"
+              :key="city.id"
+              class="city-result-item"
+              @click="selectCity(city)"
+            >
+              <div class="city-info">
+                <span class="city-name">{{ city.name }}</span>
+                <span class="city-details">{{ city.adm1 }} {{ city.adm2 }}</span>
+              </div>
+              <span class="city-select-icon">✓</span>
             </div>
-            <small>
-              获取地址: <a href="https://dev.qweather.com/" target="_blank">https://dev.qweather.com/</a>
-            </small>
           </div>
-        </div>
 
-        <div v-if="authType === 'jwt'" class="panel-section">
-          <div class="section-title">
-            <span class="section-icon">🛡️</span>
-            <h2>JWT 配置</h2>
-          </div>
-          <div class="form-group">
-            <label>凭据ID (Key ID)</label>
-            <div class="input-wrapper">
-              <input
-                v-model="qweatherKeyId"
-                type="text"
-                placeholder="输入你的凭据ID"
-                @blur="saveJWTConfig"
-              />
-              <span class="input-icon">🆔</span>
+          <!-- 已选择的城市 -->
+          <div v-if="selectedCity" class="selected-city-display">
+            <div class="selected-city-info">
+              <span class="selected-city-icon">📍</span>
+              <div class="selected-city-details">
+                <span class="selected-city-name">{{ selectedCity.cityName }}</span>
+                <span class="selected-city-id">ID: {{ selectedCity.locationId }}</span>
+              </div>
             </div>
-            <small>在控制台凭据列表中查看</small>
+            <button class="button-icon" @click="clearCity" title="清除">✕</button>
           </div>
-          <div class="form-group">
-            <label>项目ID (Project ID)</label>
-            <div class="input-wrapper">
-              <input
-                v-model="qweatherProjectId"
-                type="text"
-                placeholder="输入你的项目ID"
-                @blur="saveJWTConfig"
-              />
-              <span class="input-icon">📦</span>
-            </div>
-            <small>在控制台项目管理中查看</small>
-          </div>
-          <div class="form-group">
-            <label>私钥 (Private Key)</label>
-            <div class="textarea-wrapper">
-              <textarea
-                v-model="qweatherPrivateKey"
-                placeholder="粘贴你的私钥（包含 BEGIN/END 行）"
-                rows="4"
-                @blur="saveJWTConfig"
-              ></textarea>
-              <span class="textarea-icon">🔒</span>
-            </div>
-            <small>从 <code>ed25519-private.pem</code> 文件中复制完整内容</small>
-          </div>
-        </div>
 
-        <div v-if="authType === 'jwt'" class="info-box">
-          <strong>如何获取 JWT 凭据：</strong>
-          <ol>
-            <li>访问 <a href="https://console.qweather.com/" target="_blank">和风天气控制台</a></li>
-            <li>创建项目并选择免费订阅，记录<b>项目ID</b></li>
-            <li>添加凭据，选择 JWT 认证</li>
-            <li>将以下公钥内容粘贴到控制台凭据设置中：</li>
-          </ol>
-          <div class="public-key-box">
-            <code>MCowBQYDK2VwAyEA3+xal8ZBa/CqTDg4LjgdjMQQLv76nORPPvEdiLO6Z1c=</code>
-            <button class="copy-btn" @click="copyPublicKey">复制</button>
+          <!-- 无搜索结果 -->
+          <div v-if="showCityResults && citySearchQuery && citySearchResults.length === 0 && !citySearching" class="no-results">
+            未找到相关城市
           </div>
-          <ol start="5">
-            <li>保存后记录<b>凭据ID</b></li>
-            <li>在此处填写凭据ID、项目ID和私钥</li>
-          </ol>
+
+          <!-- 搜索中 -->
+          <div v-if="citySearching" class="searching">
+            搜索中...
+          </div>
         </div>
       </section>
 
@@ -441,6 +366,7 @@ import {
   getGlobalSettings as fetchGlobalSettings,
   updateGlobalSettings
 } from '@background/storage'
+import { QWeatherService } from '@shared/api/weather'
 
 // 标签页配置
 const tabs = ref([
@@ -450,13 +376,15 @@ const tabs = ref([
 ])
 const activeTab = ref('weather')
 
-// 天气配置
-const weatherCity = ref('北京')
-const weatherApiKey = ref('')
-const authType = ref<'apikey' | 'jwt'>('jwt')
-const qweatherKeyId = ref('')      // 凭据ID (kid)
-const qweatherProjectId = ref('')  // 项目ID (sub)
-const qweatherPrivateKey = ref('')
+// 天气配置 - 城市搜索
+const citySearchQuery = ref('')
+const citySearchResults = ref<Array<{id: string, name: string, adm1?: string, adm2?: string}>>([])
+const citySearching = ref(false)
+const showCityResults = ref(false)
+const selectedCity = ref<{locationId: string, cityName: string} | null>(null)
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const weatherService = new QWeatherService({ authType: 'jwt' })
 
 // 签到配置
 const sites = ref<SiteConfig[]>([])
@@ -494,37 +422,24 @@ const weekDays = [
   { value: 6, label: '周六' }
 ]
 
-// 和风天气 JWT 配置（硬编码）
-const JWT_CONFIG = {
-  keyId: 'KM58GGNFA3',          // 凭据ID (Key ID) - 在控制台凭据列表中查看
-  projectId: '4EE26HCJ5F',  // 项目ID (Project ID) - 在控制台项目管理中查看
-  privateKey: `-----BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VwBCIEIH/+lU+i9T/aqF14bTpFh51ciW3tiL6zScVWLD7+8TzO
------END PRIVATE KEY-----
-`              // 私钥 - 从 ed25519-private.pem 文件中复制
-}
-
 async function loadData() {
-  const result = await chrome.storage.local.get(['weather', 'checkin', 'work', 'qweatherKeyId', 'qweatherProjectId', 'qweatherPrivateKey'])
-  if (result.weather) {
-    weatherCity.value = result.weather.city || '北京'
-    weatherApiKey.value = result.weather.apiKey || ''
+  const result = await chrome.storage.local.get(['weatherSettings', 'checkin', 'work'])
+
+  // 加载天气设置
+  if (result.weatherSettings) {
+    selectedCity.value = {
+      locationId: result.weatherSettings.locationId,
+      cityName: result.weatherSettings.cityName
+    }
+    citySearchQuery.value = result.weatherSettings.cityName || ''
   }
 
-  // 优先使用硬编码的JWT配置
-  qweatherKeyId.value = result.qweatherKeyId || JWT_CONFIG.keyId
-  qweatherProjectId.value = result.qweatherProjectId || JWT_CONFIG.projectId
-  qweatherPrivateKey.value = result.qweatherPrivateKey || JWT_CONFIG.privateKey
-
-  // 根据是否有配置决定认证类型
-  if (qweatherKeyId.value || qweatherProjectId.value || qweatherPrivateKey.value) {
-    authType.value = 'jwt'
-  } else if (weatherApiKey.value) {
-    authType.value = 'apikey'
-  }
+  // 加载签到配置
   if (result.checkin?.sites) {
     sites.value = result.checkin.sites
   }
+
+  // 加载工作配置
   if (result.work) {
     console.log('Loaded work settings from storage:', result.work)
     console.log('workdays from storage:', result.work.workdays, 'isArray:', Array.isArray(result.work.workdays))
@@ -550,34 +465,70 @@ async function loadData() {
     }
     console.log('Merged work settings:', workSettings.value)
   }
+
   const settings = await fetchGlobalSettings()
   globalSettings.value = settings
 }
 
-async function saveWeatherCity() {
-  const result = await chrome.storage.local.get('weather')
-  const weather = result.weather || { city: '北京', lastUpdate: 0, data: null }
-  weather.city = weatherCity.value
-  await chrome.storage.local.set({ weather })
+// 城市搜索功能
+async function onCitySearchInput() {
+  // 清除之前的防抖定时器
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
+
+  const query = citySearchQuery.value.trim()
+
+  // 如果查询为空，清空结果
+  if (!query) {
+    citySearchResults.value = []
+    showCityResults.value = false
+    return
+  }
+
+  // 防抖处理，避免频繁请求
+  searchDebounceTimer = setTimeout(async () => {
+    try {
+      citySearching.value = true
+      const results = await weatherService.searchCity(query)
+      citySearchResults.value = results.slice(0, 10) // 只显示前10个结果
+      showCityResults.value = true
+    } catch (error) {
+      console.error('City search failed:', error)
+      citySearchResults.value = []
+    } finally {
+      citySearching.value = false
+    }
+  }, 500) // 500ms 防抖延迟
 }
 
-async function saveWeatherApiKey() {
-  const result = await chrome.storage.local.get('weather')
-  const weather = result.weather || { city: '北京', lastUpdate: 0, data: null }
-  weather.apiKey = weatherApiKey.value
-  await chrome.storage.local.set({ weather })
-}
+async function selectCity(city: {id: string, name: string, adm1?: string, adm2?: string}) {
+  selectedCity.value = {
+    locationId: city.id,
+    cityName: city.name
+  }
 
-async function saveAuthType() {
-  await chrome.storage.local.set({ weatherAuthType: authType.value })
-}
-
-async function saveJWTConfig() {
+  // 保存到存储
   await chrome.storage.local.set({
-    qweatherKeyId: qweatherKeyId.value,
-    qweatherProjectId: qweatherProjectId.value,
-    qweatherPrivateKey: qweatherPrivateKey.value
+    weatherSettings: {
+      locationId: city.id,
+      cityName: city.name
+    }
   })
+
+  // 清空搜索状态
+  citySearchQuery.value = city.name
+  citySearchResults.value = []
+  showCityResults.value = false
+}
+
+async function clearCity() {
+  selectedCity.value = null
+  citySearchQuery.value = ''
+  citySearchResults.value = []
+
+  // 清除存储
+  await chrome.storage.local.remove('weatherSettings')
 }
 
 async function addSite() {
@@ -652,23 +603,6 @@ function toggleWorkday(day: number) {
     workSettings.value.workdays = [...workSettings.value.workdays, day]
   }
   saveWorkSettings()
-}
-
-function copyPublicKey() {
-  const publicKey = 'MCowBQYDK2VwAyEA3+xal8ZBa/CqTDg4LjgdjMQQLv76nORPPvEdiLO6Z1c='
-  navigator.clipboard.writeText(publicKey).then(() => {
-    // 可以添加提示信息
-    alert('公钥已复制到剪贴板')
-  }).catch(() => {
-    // 降级方案
-    const textArea = document.createElement('textarea')
-    textArea.value = publicKey
-    document.body.appendChild(textArea)
-    textArea.select()
-    document.execCommand('copy')
-    document.body.removeChild(textArea)
-    alert('公钥已复制到剪贴板')
-  })
 }
 
 onMounted(() => {
@@ -1695,5 +1629,122 @@ onMounted(() => {
   .time-input-group input {
     width: 100%;
   }
+}
+
+/* ==================== 城市搜索结果 ==================== */
+.city-search-results {
+  margin-top: 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: white;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.city-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.city-result-item:last-child {
+  border-bottom: none;
+}
+
+.city-result-item:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+}
+
+.city-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.city-name {
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 1rem;
+}
+
+.city-details {
+  font-size: 0.875rem;
+  color: #718096;
+}
+
+.city-select-icon {
+  color: #667eea;
+  font-size: 1.25rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.city-result-item:hover .city-select-icon {
+  opacity: 1;
+}
+
+/* 已选择城市显示 */
+.selected-city-display {
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.selected-city-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.selected-city-icon {
+  font-size: 1.5rem;
+}
+
+.selected-city-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.selected-city-name {
+  font-weight: 600;
+  color: #667eea;
+  font-size: 1.125rem;
+}
+
+.selected-city-id {
+  font-size: 0.875rem;
+  color: #718096;
+}
+
+/* 无结果和搜索中状态 */
+.no-results,
+.searching {
+  margin-top: 12px;
+  padding: 20px;
+  text-align: center;
+  color: #718096;
+  font-size: 0.95rem;
+  background: #f7fafc;
+  border-radius: 10px;
+  border: 2px dashed #e2e8f0;
+}
+
+.searching {
+  color: #667eea;
+  border-style: solid;
+  border-color: rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
 }
 </style>

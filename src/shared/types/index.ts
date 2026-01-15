@@ -104,9 +104,16 @@ export interface WorkStats {
   daysUntilWeekend: number       // 距离休息日天数
 }
 
+// 天气设置类型
+export interface WeatherSettings {
+  locationId: string
+  cityName: string
+}
+
 // 存储数据类型
 export interface StorageData {
   weather: WeatherStorage
+  weatherSettings: WeatherSettings
   checkIn: {
     sites: SiteConfig[]
     records: Record<string, CheckInRecord>

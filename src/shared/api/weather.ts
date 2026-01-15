@@ -1,5 +1,5 @@
 import type { WeatherData } from '@shared/types'
-import { QWEATHER_API_BASE, MESSAGE_TYPES } from '@shared/constants'
+import { QWEATHER_API_BASE, QWEATHER_GEOAPI_BASE, MESSAGE_TYPES } from '@shared/constants'
 
 export type AuthType = 'apikey' | 'jwt'
 
@@ -74,7 +74,7 @@ export class QWeatherService {
     this.authType = authType
   }
 
-  async getWeatherByLocation(location: string): Promise<WeatherData> {
+  async getWeatherByLocation(location: string): Promise<WeatherData & { fxLink?: string, basic?: any }> {
     const authHeader = await this.getAuthHeader()
 
     console.log('[QWeatherService] authHeader:', authHeader)
@@ -100,6 +100,7 @@ export class QWeatherService {
       }
 
       const result = await response.json()
+      console.log('[QWeatherService] Response:', result)
 
       if (result.code !== '200') {
         throw new Error(`Weather API error: ${result.code}`)
@@ -116,7 +117,9 @@ export class QWeatherService {
         windDir: now.windDir,
         pressure: parseInt(now.pressure),
         vis: parseInt(now.vis),
-        updateTime: result.updateTime
+        updateTime: result.updateTime,
+        fxLink: result.fxLink,
+        basic: result.basic
       }
     } catch (error) {
       console.error('Failed to fetch weather:', error)
@@ -194,7 +197,7 @@ export class QWeatherService {
     }
   }
 
-  async searchCity(keyword: string): Promise<Array<{id: string, name: string}>> {
+  async searchCity(keyword: string): Promise<Array<{id: string, name: string, type: string, rank: string}>> {
     const authHeader = await this.getAuthHeader()
 
     if (!authHeader.Authorization && !authHeader['X-QW-Api-Key']) {
@@ -202,8 +205,11 @@ export class QWeatherService {
     }
 
     try {
-      const url = new URL(`${this.baseUrl}/city/lookup`)
+      // 城市查询使用专属API域名，路径为 /geo/v2/city/lookup
+      const url = new URL(`${QWEATHER_GEOAPI_BASE}/geo/v2/city/lookup`)
       url.searchParams.set('location', keyword)
+
+      console.log('[QWeatherService] City lookup URL:', url.toString())
 
       const response = await fetch(url.toString(), {
         headers: authHeader
@@ -214,6 +220,7 @@ export class QWeatherService {
       }
 
       const result = await response.json()
+      console.log('[QWeatherService] City lookup result:', result)
 
       if (result.code !== '200') {
         throw new Error(`City lookup error: ${result.code}`)
@@ -221,7 +228,9 @@ export class QWeatherService {
 
       return (result.location || []).map((loc: any) => ({
         id: loc.id,
-        name: loc.name
+        name: loc.name,
+        type: loc.type,
+        rank: loc.rank
       }))
     } catch (error) {
       console.error('Failed to search city:', error)
