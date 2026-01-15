@@ -1,3 +1,4 @@
+
 # Chrome NewTab Dashboard - 项目约定
 
 ## 必须遵循的规则
