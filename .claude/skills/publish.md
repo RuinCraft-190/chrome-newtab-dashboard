@@ -15,23 +15,21 @@ description: 发布到 Chrome Web Store
    - 隐私政策（如果收集数据）
 
 发布步骤：
-1. 构建生产版本：
+1. 构建生产版本（会自动生成 dist/chrome-newtab-dashboard.zip）：
    ```bash
    npm run build
    ```
 
-2. 打包扩展：
+2. 打包已由构建脚本自动完成，直接使用：
    ```bash
-   cd dist
-   zip -r ../extension.zip .
-   cd ..
+   dist/chrome-newtab-dashboard.zip
    ```
 
 3. 访问 Chrome Web Store Developer Dashboard：
    https://chrome.google.com/webstore/devconsole
 
 4. 点击"新建项目"
-5. 上传 extension.zip
+5. 上传 dist/chrome-newtab-dashboard.zip
 6. 填写商店信息：
    - 名称：新标签页仪表盘
    - 简短描述：天气和自动签到的新标签页

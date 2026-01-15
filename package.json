@@ -1,11 +1,12 @@
 {
   "name": "chrome-newtab-dashboard",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "Vue3 + TypeScript Chrome 新标签页仪表盘扩展",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/postbuild.js",
+    "release": "node scripts/release.js",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.ts",
     "lint:fix": "eslint . --ext .vue,.js,.ts --fix",
