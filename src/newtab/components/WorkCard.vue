@@ -31,11 +31,11 @@
       <div class="work-details">
         <div class="detail-item">
           <span class="detail-label">距离发薪</span>
-          <span class="detail-value">{{ daysUntilPayday }} 天</span>
+          <span class="detail-value">{{ daysUntilPayday }} d</span>
         </div>
         <div class="detail-item">
           <span class="detail-label">距离休息还剩</span>
-          <span class="detail-value">{{ daysUntilWeekend }} 天</span>
+          <span class="detail-value">{{ daysUntilWeekend }} d</span>
         </div>
       </div>
 
@@ -247,6 +247,7 @@ onUnmounted(() => {
 .earnings-value {
   font-size: 1.75rem;
   font-weight: 700;
+  font-family: 'Consolas', 'Monaco', monospace;
 }
 
 .work-details {
@@ -274,6 +275,7 @@ onUnmounted(() => {
   font-size: 1.25rem;
   font-weight: 600;
   color: #667eea;
+  font-family: 'Consolas', 'Monaco', monospace;
 }
 
 .work-footer {
@@ -286,6 +288,7 @@ onUnmounted(() => {
 
 .work-schedule {
   font-weight: 500;
+  font-family: 'Consolas', 'Monaco', monospace;
 }
 
 .empty-state {
