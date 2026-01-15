@@ -35,6 +35,7 @@
     <div class="dashboard">
       <WeatherCard />
       <WorkCard />
+      <NavigationCard />
       <!-- <CheckInCard /> -->
     </div>
   </div>
@@ -45,6 +46,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import WeatherCard from './components/WeatherCard.vue'
 import WorkCard from './components/WorkCard.vue'
 import CheckInCard from './components/CheckInCard.vue'
+import NavigationCard from './components/NavigationCard.vue'
 
 const realTime = ref('')
 const dateDisplay = ref('')

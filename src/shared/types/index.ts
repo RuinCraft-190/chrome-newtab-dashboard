@@ -110,6 +110,19 @@ export interface WeatherSettings {
   cityName: string
 }
 
+// 网页导航相关类型
+export interface NavigationItem {
+  id: string
+  name: string
+  url: string
+  icon?: string
+  createdAt: number
+}
+
+export interface NavigationStorage {
+  items: NavigationItem[]
+}
+
 // 存储数据类型
 export interface StorageData {
   weather: WeatherStorage
@@ -123,4 +136,5 @@ export interface StorageData {
     }
   }
   work: WorkSettings
+  navigation: NavigationStorage
 }

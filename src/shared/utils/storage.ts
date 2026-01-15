@@ -40,7 +40,8 @@ export class StorageHelper {
             workEndHour: 18,
             workEndMinute: 0,
             workdays: [1, 2, 3, 4, 5]
-          }
+          },
+          navigation: result.navigation || { items: [] }
         })
       })
     })
