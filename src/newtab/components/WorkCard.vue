@@ -16,35 +16,75 @@
       </button>
     </div>
 
-    <div v-else class="work-content">
-      <div class="work-main">
-        <div class="countdown-section">
-          <div class="countdown-label">距离下班</div>
-          <div class="countdown-time">{{ timeUntilOffWork }}</div>
+    <div v-else class="work-content" :class="`work-content--${cardSize || '1x1'}`">
+      <!-- 1x1 精简模式：只显示倒计时 -->
+      <template v-if="!cardSize || cardSize === '1x1'">
+        <div class="work-main work-main--compact">
+          <div class="countdown-section countdown-section--compact">
+            <div class="countdown-label">距离下班</div>
+            <div class="countdown-time">{{ timeUntilOffWork }}</div>
+          </div>
         </div>
-        <div class="earnings-section">
-          <div class="earnings-label">今日已赚</div>
-          <div class="earnings-value">¥{{ earnedToday.toFixed(2) }}</div>
-        </div>
-      </div>
+      </template>
 
-      <div class="work-details">
-        <div class="detail-item">
-          <span class="detail-label">距离发薪</span>
-          <span class="detail-value">{{ daysUntilPayday }} 天</span>
+      <!-- 2x1/1x2 标准模式：倒计时+今日已赚 -->
+      <template v-else-if="cardSize === '2x1' || cardSize === '1x2'">
+        <div class="work-main">
+          <div class="countdown-section">
+            <div class="countdown-label">距离下班</div>
+            <div class="countdown-time">{{ timeUntilOffWork }}</div>
+          </div>
+          <div class="earnings-section">
+            <div class="earnings-label">今日已赚</div>
+            <div class="earnings-value">¥{{ earnedToday.toFixed(2) }}</div>
+          </div>
         </div>
-        <div class="detail-item">
-          <span class="detail-label">距离休息还剩</span>
-          <span class="detail-value">{{ daysUntilWeekend }} 天</span>
+        <div class="work-footer work-footer--standard">
+          <div class="work-schedule">
+            {{ formatTime(settings.workStartHour, settings.workStartMinute) }} - {{ formatTime(settings.workEndHour, settings.workEndMinute) }}
+          </div>
         </div>
-      </div>
+      </template>
 
-      <div class="work-footer">
-        <div class="work-schedule">
-          工作时间: {{ formatTime(settings.workStartHour, settings.workStartMinute) }} -
-          {{ formatTime(settings.workEndHour, settings.workEndMinute) }}
+      <!-- 2x2 完整模式：所有信息 -->
+      <template v-else-if="cardSize === '2x2'">
+        <div class="work-main work-main--large">
+          <div class="countdown-section countdown-section--large">
+            <div class="countdown-label">距离下班</div>
+            <div class="countdown-time countdown-time--large">{{ timeUntilOffWork }}</div>
+          </div>
+          <div class="earnings-section earnings-section--large">
+            <div class="earnings-label">今日已赚</div>
+            <div class="earnings-value earnings-value--large">¥{{ earnedToday.toFixed(2) }}</div>
+          </div>
         </div>
-      </div>
+
+        <div class="work-details work-details--full">
+          <div class="detail-item">
+            <span class="detail-label">月薪</span>
+            <span class="detail-value">¥{{ settings.monthlySalary.toLocaleString() }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">距离发薪</span>
+            <span class="detail-value">{{ daysUntilPayday }} 天</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">距离休息</span>
+            <span class="detail-value">{{ daysUntilWeekend }} 天</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">工作日</span>
+            <span class="detail-value">{{ settings.workdays.length }} 天/周</span>
+          </div>
+        </div>
+
+        <div class="work-footer">
+          <div class="work-schedule">
+            工作时间: {{ formatTime(settings.workStartHour, settings.workStartMinute) }} -
+            {{ formatTime(settings.workEndHour, settings.workEndMinute) }}
+          </div>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -52,7 +92,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import storageHelper from '@shared/utils/storage'
-import type { WorkSettings } from '@shared/types'
+import type { WorkSettings, CardSize } from '@shared/types'
+
+// 接收卡片尺寸
+const props = defineProps<{
+  cardSize?: CardSize
+}>()
 
 const settings = ref<WorkSettings>({
   monthlySalary: 10000,
@@ -116,7 +161,6 @@ function calculateWorkStats() {
     daysUntilPayday.value = settings.value.payday - today
   } else {
     // 计算下个月的发薪日
-    const nextMonth = new Date(now.getFullYear(), currentMonth + 1, settings.value.payday)
     const daysInMonth = new Date(now.getFullYear(), currentMonth + 1, 0).getDate()
     daysUntilPayday.value = daysInMonth - today + settings.value.payday
   }
@@ -208,12 +252,57 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .work-content {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  height: 100%;
+  flex: 1;
 }
 
+/* ============ 1x1 精简模式 ============ */
+.work-main--compact {
+  display: flex;
+  place-items: center;
+  flex: 1;
+}
+
+.countdown-section--compact {
+  width: 100%;
+  max-width: 200px;
+}
+
+/* ============ 2x2 完整模式 ============ */
+.work-main--large {
+  gap: 20px;
+}
+
+.countdown-section--large,
+.earnings-section--large {
+  padding: 24px;
+}
+
+.countdown-time--large,
+.earnings-value--large {
+  font-size: 2.5rem;
+}
+
+.work-details--full {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  padding: 20px 0;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+/* ============ 通用样式 ============ */
 .work-main {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -252,7 +341,6 @@ onUnmounted(() => {
 
 .work-details {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
   padding: 16px 0;
   border-top: 1px solid #e2e8f0;
@@ -284,6 +372,10 @@ onUnmounted(() => {
   align-items: center;
   font-size: 0.875rem;
   color: #666;
+}
+
+.work-footer--standard {
+  margin-top: auto;
 }
 
 .work-schedule {

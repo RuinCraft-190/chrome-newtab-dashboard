@@ -32,12 +32,11 @@
       </div>
     </div>
 
-    <div class="dashboard">
-      <WeatherCard @contextmenu.prevent="handleWeatherContextMenu" />
-      <WorkCard />
-      <NavigationCard @navigation-contextmenu="handleNavigationContextMenu" />
-      <!-- <CheckInCard /> -->
-    </div>
+    <DashboardGrid
+      @card-contextmenu="handleCardContextMenu"
+      @weather-contextmenu="handleWeatherContextMenu"
+      @navigation-contextmenu="handleNavigationContextMenu"
+    />
 
     <!-- 右键菜单 -->
     <div
@@ -50,6 +49,10 @@
         <div class="context-menu-item" @click="onAddNavigation">
           <span class="menu-icon">➕</span>
           新建网站导航
+        </div>
+        <div class="context-menu-item" @click="onResetLayout">
+          <span class="menu-icon">🔄</span>
+          重置布局
         </div>
       </template>
 
@@ -76,15 +79,48 @@
           切换城市
         </div>
       </template>
+
+      <!-- 卡片尺寸菜单 -->
+      <template v-if="contextMenu.type === 'card-size'">
+        <div class="context-menu-section-title">卡片尺寸</div>
+        <div
+          v-for="option in sizeOptions"
+          :key="option.value"
+          class="context-menu-item"
+          :class="{ active: currentCardConfig?.size === option.value }"
+          @click="onChangeCardSize(option.value)"
+        >
+          <span class="size-icon">{{ option.icon }}</span>
+          <span>{{ option.label }}</span>
+        </div>
+        <div class="context-menu-divider"></div>
+        <div
+          class="context-menu-item"
+          @click="onToggleCardVisibility"
+        >
+          <span class="menu-icon">{{ currentCardConfig?.visible ? '👁️' : '👁️‍🗨️' }}</span>
+          {{ currentCardConfig?.visible ? '隐藏卡片' : '显示卡片' }}
+        </div>
+      </template>
+
+      <!-- 卡片可见性菜单（非可调整尺寸的卡片） -->
+      <template v-if="contextMenu.type === 'card-visibility'">
+        <div
+          class="context-menu-item"
+          @click="onToggleCardVisibility"
+        >
+          <span class="menu-icon">{{ currentCardConfig?.visible ? '👁️' : '👁️‍🗨️' }}</span>
+          {{ currentCardConfig?.visible ? '隐藏卡片' : '显示卡片' }}
+        </div>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import WeatherCard from './components/WeatherCard.vue'
-import WorkCard from './components/WorkCard.vue'
-import NavigationCard from './components/NavigationCard.vue'
+import DashboardGrid from './components/DashboardGrid.vue'
+import type { CardConfig } from '@shared/types'
 
 const realTime = ref('')
 const dateDisplay = ref('')
@@ -95,18 +131,39 @@ const contextMenu = ref({
   visible: false,
   x: 0,
   y: 0,
-  type: '' // 'container' | 'navigation' | 'weather'
+  type: '' // 'container' | 'navigation' | 'weather' | 'card-size' | 'card-visibility'
 })
 const contextMenuItem = ref<any>(null)
+const currentCardConfig = ref<CardConfig | null>(null)
+
+// 可用的卡片尺寸选项
+const sizeOptions = [
+  { value: '1x1', label: '标准 (1x1)', icon: '▢' },
+  { value: '2x1', label: '宽屏 (2x1)', icon: '▬' },
+  { value: '1x2', label: '高屏 (1x2)', icon: '▮' },
+  { value: '2x2', label: '大屏 (2x2)', icon: '⬛' }
+]
 
 // 显示容器（空白区域）右键菜单
 function showContainerContextMenu(event: MouseEvent) {
   // 检查点击的是否是空白区域（不是卡片）
   const target = event.target as HTMLElement
-  const isCard = target.closest('.card') || target.closest('.nav-card')
+  const isCard = target.closest('.dashboard-card') || target.closest('.card') || target.closest('.nav-card')
 
   if (!isCard) {
     showContextMenu(event, 'container')
+  }
+}
+
+// 处理 DashboardGrid 的卡片右键菜单
+function handleCardContextMenu(event: MouseEvent, config: CardConfig) {
+  currentCardConfig.value = config
+  // 根据卡片类型决定显示什么菜单
+  const resizeableTypes = ['weather', 'work']
+  if (resizeableTypes.includes(config.type)) {
+    showContextMenu(event, 'card-size')
+  } else {
+    showContextMenu(event, 'card-visibility')
   }
 }
 
@@ -177,6 +234,78 @@ function onRefreshWeather() {
 // 菜单操作：切换城市
 function onChangeCity() {
   chrome.runtime.openOptionsPage()
+  closeContextMenu()
+}
+
+// 菜单操作：重置布局
+async function onResetLayout() {
+  if (!confirm('确定要重置卡片布局吗？这将恢复默认设置。')) {
+    return
+  }
+
+  const defaultLayout = {
+    version: '1.0.0',
+    columns: 3,
+    cards: [
+      {
+        id: 'weather-1',
+        type: 'weather' as const,
+        size: '1x1' as const,
+        visible: true,
+        position: 0
+      },
+      {
+        id: 'work-1',
+        type: 'work' as const,
+        size: '1x1' as const,
+        visible: true,
+        position: 1
+      },
+      {
+        id: 'navigation-1',
+        type: 'navigation' as const,
+        size: '2x1' as const,
+        visible: true,
+        position: 2
+      }
+    ]
+  }
+
+  await (chrome as any).storage.local.set({ dashboardLayout: defaultLayout })
+  window.location.reload()
+}
+
+// 菜单操作：更改卡片尺寸
+async function onChangeCardSize(size: string) {
+  if (currentCardConfig.value) {
+    const cardId = currentCardConfig.value.id
+    const result = await (chrome as any).storage.local.get('dashboardLayout')
+    if (result.dashboardLayout && Array.isArray(result.dashboardLayout.cards)) {
+      const card = result.dashboardLayout.cards.find((c: CardConfig) => c.id === cardId)
+      if (card) {
+        card.size = size as any
+        await (chrome as any).storage.local.set({ dashboardLayout: result.dashboardLayout })
+        // 不需要重新加载页面，DashboardGrid 会通过 storage 监听自动更新
+      }
+    }
+  }
+  closeContextMenu()
+}
+
+// 菜单操作：切换卡片可见性
+async function onToggleCardVisibility() {
+  if (currentCardConfig.value) {
+    const cardId = currentCardConfig.value.id
+    const result = await (chrome as any).storage.local.get('dashboardLayout')
+    if (result.dashboardLayout && Array.isArray(result.dashboardLayout.cards)) {
+      const card = result.dashboardLayout.cards.find((c: CardConfig) => c.id === cardId)
+      if (card) {
+        card.visible = !card.visible
+        await (chrome as any).storage.local.set({ dashboardLayout: result.dashboardLayout })
+        // 不需要重新加载页面，DashboardGrid 会通过 storage 监听自动更新
+      }
+    }
+  }
   closeContextMenu()
 }
 
@@ -508,14 +637,6 @@ onUnmounted(() => {
   }
 }
 
-.dashboard {
-  max-width: 900px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-}
-
 /* 右键菜单样式 */
 .context-menu {
   position: fixed;
@@ -565,5 +686,32 @@ onUnmounted(() => {
   font-size: 1.1rem;
   width: 20px;
   text-align: center;
+}
+
+.size-icon {
+  font-size: 1.1rem;
+  width: 20px;
+  text-align: center;
+}
+
+.context-menu-section-title {
+  padding: 8px 16px 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 4px 0;
+}
+
+.context-menu-item.active {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  color: #667eea;
+  font-weight: 500;
 }
 </style>

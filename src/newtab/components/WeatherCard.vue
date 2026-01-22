@@ -16,37 +16,98 @@
       {{ error }}
     </div>
 
-    <div v-else-if="weather" class="weather-content">
-      <div class="weather-main">
-        <div class="temperature">
-          <span class="temp-value">{{ weather.temp }}</span>
-          <span class="temp-unit">°C</span>
+    <div v-else-if="weather" class="weather-content" :class="`weather-content--${cardSize || '1x1'}`">
+      <!-- 1x1 精简模式：只显示温度和天气状况 -->
+      <template v-if="!cardSize || cardSize === '1x1'">
+        <div class="weather-main weather-main--compact">
+          <div class="temperature">
+            <span class="temp-value">{{ weather.temp }}</span>
+            <span class="temp-unit">°C</span>
+          </div>
+          <div class="condition condition--compact">
+            <img :src="weatherIconUrl" :alt="weather.condition" class="weather-icon weather-icon--compact" />
+          </div>
         </div>
-        <div class="condition">
-          <img :src="weatherIconUrl" :alt="weather.condition" class="weather-icon" />
-          <span>{{ weather.condition }}</span>
+        <div class="weather-footer weather-footer--compact">
+          <span class="city-name">{{ cityName }}</span>
         </div>
-      </div>
+      </template>
 
-      <div class="weather-details">
-        <div class="detail-item">
-          <span class="detail-label">体感</span>
-          <span class="detail-value">{{ weather.feelsLike }}°C</span>
+      <!-- 2x1 标准模式：温度+天气+湿度风速 -->
+      <template v-else-if="cardSize === '2x1' || cardSize === '1x2'">
+        <div class="weather-main">
+          <div class="temperature">
+            <span class="temp-value">{{ weather.temp }}</span>
+            <span class="temp-unit">°C</span>
+          </div>
+          <div class="condition">
+            <img :src="weatherIconUrl" :alt="weather.condition" class="weather-icon" />
+            <span>{{ weather.condition }}</span>
+          </div>
         </div>
-        <div class="detail-item">
-          <span class="detail-label">湿度</span>
-          <span class="detail-value">{{ weather.humidity }}%</span>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">风速</span>
-          <span class="detail-value">{{ weather.windSpeed }} km/h {{ weather.windDir }}</span>
-        </div>
-      </div>
 
-      <div class="weather-footer">
-        <span class="city-name">{{ cityName }}</span>
-        <span class="update-time">{{ formattedUpdateTime }}</span>
-      </div>
+        <div class="weather-details weather-details--standard">
+          <div class="detail-item">
+            <span class="detail-label">体感</span>
+            <span class="detail-value">{{ weather.feelsLike }}°C</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">湿度</span>
+            <span class="detail-value">{{ weather.humidity }}%</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">风速</span>
+            <span class="detail-value">{{ weather.windSpeed }} km/h</span>
+          </div>
+        </div>
+
+        <div class="weather-footer">
+          <span class="city-name">{{ cityName }}</span>
+          <span class="update-time">{{ formattedUpdateTime }}</span>
+        </div>
+      </template>
+
+      <!-- 2x2 完整模式：所有详细信息 -->
+      <template v-else-if="cardSize === '2x2'">
+        <div class="weather-main weather-main--large">
+          <div class="temperature temperature--large">
+            <span class="temp-value">{{ weather.temp }}</span>
+            <span class="temp-unit">°C</span>
+          </div>
+          <div class="condition condition--large">
+            <img :src="weatherIconUrl" :alt="weather.condition" class="weather-icon weather-icon--large" />
+            <span class="condition-text">{{ weather.condition }}</span>
+          </div>
+        </div>
+
+        <div class="weather-details weather-details--full">
+          <div class="detail-item">
+            <span class="detail-label">体感温度</span>
+            <span class="detail-value">{{ weather.feelsLike }}°C</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">相对湿度</span>
+            <span class="detail-value">{{ weather.humidity }}%</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">风速风向</span>
+            <span class="detail-value">{{ weather.windSpeed }} km/h {{ weather.windDir }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">大气压</span>
+            <span class="detail-value">{{ weather.pressure }} hPa</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">能见度</span>
+            <span class="detail-value">{{ weather.vis }} km</span>
+          </div>
+        </div>
+
+        <div class="weather-footer weather-footer--large">
+          <span class="city-name">{{ cityName }}</span>
+          <span class="update-time">{{ formattedUpdateTime }}</span>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -55,7 +116,12 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { QWeatherService } from '@shared/api/weather'
 import storageHelper from '@shared/utils/storage'
-import type { WeatherData } from '@shared/types'
+import type { WeatherData, CardSize } from '@shared/types'
+
+// 接收卡片尺寸
+const props = defineProps<{
+  cardSize?: CardSize
+}>()
 
 const weather = ref<WeatherData | null>(null)
 const loading = ref(true)
@@ -197,12 +263,139 @@ defineExpose({
 </script>
 
 <style scoped>
+.card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .weather-content {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  height: 100%;
 }
 
+/* ============ 1x1 精简模式 ============ */
+.weather-main--compact {
+  justify-content: center;
+  gap: 20px;
+  flex: 1;
+}
+
+.weather-icon--compact {
+  width: 56px;
+  height: 56px;
+}
+
+.condition--compact {
+  flex-direction: row;
+}
+
+.weather-footer--compact {
+  justify-content: center;
+  padding-top: 8px;
+}
+
+.weather-footer--compact .city-name {
+  font-size: 1rem;
+}
+
+/* ============ 2x1/1x2 标准模式 ============ */
+.weather-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.temperature {
+  display: flex;
+  align-items: flex-start;
+}
+
+.temp-value {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1;
+}
+
+.temp-unit {
+  font-size: 1.5rem;
+  color: #666;
+  margin-left: 4px;
+}
+
+.condition {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.weather-icon {
+  width: 64px;
+  height: 64px;
+}
+
+.weather-details--standard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 16px 0;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+/* ============ 2x2 完整模式 ============ */
+.weather-main--large {
+  justify-content: center;
+  gap: 30px;
+  padding: 20px 0;
+}
+
+.temperature--large .temp-value {
+  font-size: 4rem;
+}
+
+.temperature--large .temp-unit {
+  font-size: 2rem;
+}
+
+.condition--large {
+  gap: 12px;
+}
+
+.weather-icon--large {
+  width: 80px;
+  height: 80px;
+}
+
+.condition--large .condition-text {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.weather-details--full {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 20px 0;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.weather-details--full .detail-item:last-child {
+  grid-column: span 3;
+  text-align: center;
+}
+
+.weather-footer--large {
+  padding-top: 12px;
+}
+
+/* ============ 通用样式 ============ */
 .weather-main {
   display: flex;
   justify-content: space-between;
@@ -241,7 +434,6 @@ defineExpose({
 
 .weather-details {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   padding: 16px 0;
   border-top: 1px solid #e2e8f0;
@@ -278,5 +470,10 @@ defineExpose({
   font-size: 1.125rem;
   font-weight: 600;
   color: #667eea;
+}
+
+.update-time {
+  font-size: 0.875rem;
+  color: #999;
 }
 </style>

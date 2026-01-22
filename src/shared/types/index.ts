@@ -123,6 +123,24 @@ export interface NavigationStorage {
   items: NavigationItem[]
 }
 
+// 仪表盘布局相关类型
+export type CardSize = '1x1' | '2x1' | '1x2' | '2x2'
+export type CardType = 'weather' | 'work' | 'navigation' | 'checkin'
+
+export interface CardConfig {
+  id: string
+  type: CardType
+  size: CardSize
+  visible: boolean
+  position: number
+}
+
+export interface DashboardLayout {
+  version: string
+  columns: number
+  cards: CardConfig[]
+}
+
 // 存储数据类型
 export interface StorageData {
   weather: WeatherStorage
@@ -137,4 +155,5 @@ export interface StorageData {
   }
   work: WorkSettings
   navigation: NavigationStorage
+  dashboardLayout: DashboardLayout
 }

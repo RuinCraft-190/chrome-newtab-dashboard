@@ -1,0 +1,156 @@
+/* Dashboard Grid 样式系统 */
+
+/* 网格容器 */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns, 3), 1fr);
+  grid-auto-rows: minmax(200px, auto);
+  gap: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  /* 为 Sortable.js 的拖拽动画预留空间 */
+  min-height: 200px;
+}
+
+/* 基础卡片样式 */
+.dashboard-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  min-height: 200px;
+  overflow: hidden;
+}
+
+.dashboard-card:hover {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* 拖拽状态 */
+.dashboard-card.is-dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  cursor: grabbing;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* 幽灵卡片（拖拽时的占位符） */
+.dashboard-card.ghost-card {
+  opacity: 0.3;
+  background: rgba(102, 126, 234, 0.1);
+  border: 2px dashed rgba(102, 126, 234, 0.5);
+}
+
+/* 尺寸修饰符 */
+.dashboard-card[data-size='1x1'] {
+  grid-column: span 1;
+  grid-row: span 1;
+}
+
+.dashboard-card[data-size='2x1'] {
+  grid-column: span 2;
+  grid-row: span 1;
+}
+
+.dashboard-card[data-size='1x2'] {
+  grid-column: span 1;
+  grid-row: span 2;
+}
+
+.dashboard-card[data-size='2x2'] {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+/* 拖动手柄 */
+.drag-handle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.2s;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.dashboard-card:hover .drag-handle {
+  opacity: 1;
+}
+
+.drag-handle:hover {
+  background: rgba(102, 126, 234, 0.2);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.drag-handle svg {
+  width: 14px;
+  height: 14px;
+  color: #667eea;
+}
+
+/* 尺寸徽章 */
+.size-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 4px 8px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #667eea;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.dashboard-card:hover .size-badge {
+  opacity: 1;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(var(--grid-columns, 2), 1fr);
+    gap: 12px;
+  }
+
+  .dashboard-card[data-size='2x1'] {
+    grid-column: span 1;
+  }
+
+  .dashboard-card[data-size='2x2'] {
+    grid-column: span 1;
+    grid-row: span 2;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .dashboard-card[data-size='2x1'],
+  .dashboard-card[data-size='1x2'],
+  .dashboard-card[data-size='2x2'] {
+    grid-column: span 1;
+    grid-row: span 1;
+  }
+
+  .size-badge {
+    display: none;
+  }
+}

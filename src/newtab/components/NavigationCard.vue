@@ -1,8 +1,8 @@
 <template>
-  <div class="nav-cards">
-    <template v-if="navigationItems.length > 0">
+  <div class="nav-cards" :style="{ gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }">
+    <template v-if="displayItems.length > 0">
       <a
-        v-for="item in navigationItems"
+        v-for="item in displayItems"
         :key="item.id"
         :href="item.url"
         target="_blank"
@@ -71,9 +71,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import type { NavigationItem } from '@shared/types'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import type { NavigationItem, CardSize } from '@shared/types'
 import storage from '@shared/utils/storage'
+
+// 接收卡片尺寸
+const props = defineProps<{
+  cardSize?: CardSize
+}>()
 
 // 定义 emit
 const emit = defineEmits<{
@@ -81,6 +86,29 @@ const emit = defineEmits<{
 }>()
 
 const navigationItems = ref<NavigationItem[]>([])
+
+// 根据卡片尺寸计算显示的导航项数量
+const displayItems = computed(() => {
+  const maxItems = {
+    '1x1': 4,      // 1x1 显示 4 个（2x2 布局）
+    '1x2': 6,      // 1x2 显示 6 个（2x3 布局）
+    '2x1': 8,      // 2x1 显示 8 个（4x2 布局）
+    '2x2': 12      // 2x2 显示 12 个（4x3 布局）
+  }
+  const limit = maxItems[props.cardSize || '1x1']
+  return navigationItems.value.slice(0, limit)
+})
+
+// 根据卡片尺寸计算网格列数
+const gridColumns = computed(() => {
+  const columns = {
+    '1x1': 2,
+    '1x2': 2,
+    '2x1': 4,
+    '2x2': 4
+  }
+  return columns[props.cardSize || '1x1']
+})
 const showAddDialog = ref(false)
 const isAdding = ref(false)
 const isEditing = ref(false)
@@ -268,8 +296,8 @@ function handleIconError(event: Event, item: NavigationItem) {
 <style scoped>
 .nav-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 16px;
+  gap: 12px;
+  height: 100%;
 }
 
 .nav-card {
@@ -277,19 +305,19 @@ function handleIconError(event: Event, item: NavigationItem) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px 12px;
+  padding: 12px 8px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   cursor: pointer;
 }
 
 .nav-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .nav-card:hover .delete-btn {
@@ -297,35 +325,35 @@ function handleIconError(event: Event, item: NavigationItem) {
 }
 
 .nav-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .nav-icon img {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
 }
 
 .default-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: 600;
-  font-size: 18px;
+  font-size: 14px;
 }
 
 .nav-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: #333;
   text-align: center;
@@ -337,10 +365,10 @@ function handleIconError(event: Event, item: NavigationItem) {
 
 .delete-btn {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 20px;
-  height: 20px;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
   border: none;
   background: rgba(220, 53, 69, 0.9);
   border-radius: 50%;
@@ -349,7 +377,7 @@ function handleIconError(event: Event, item: NavigationItem) {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1;
   opacity: 0;
   transition: all 0.2s ease;
@@ -362,7 +390,7 @@ function handleIconError(event: Event, item: NavigationItem) {
 
 /* 添加卡片 */
 .add-card {
-  min-height: 88px;
+  min-height: 70px;
   justify-content: center;
   background: rgba(255, 255, 255, 0.6);
   border: 2px dashed rgba(102, 126, 234, 0.3);
@@ -375,15 +403,15 @@ function handleIconError(event: Event, item: NavigationItem) {
 }
 
 .add-icon {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 300;
   line-height: 1;
   transition: transform 0.2s ease;
@@ -512,34 +540,30 @@ function handleIconError(event: Event, item: NavigationItem) {
   cursor: not-allowed;
 }
 
+/* ============ 响应式调整 ============ */
 @media (max-width: 480px) {
-  .nav-cards {
-    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
-    gap: 12px;
-  }
-
   .nav-card {
-    padding: 12px 8px;
+    padding: 10px 6px;
   }
 
   .nav-icon {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
   }
 
   .nav-icon img {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
   }
 
   .default-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 16px;
+    width: 36px;
+    height: 36px;
+    font-size: 12px;
   }
 
   .nav-name {
-    font-size: 12px;
+    font-size: 11px;
   }
 }
 </style>
