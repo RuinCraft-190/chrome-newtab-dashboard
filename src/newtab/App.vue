@@ -227,7 +227,7 @@ onUnmounted(() => {
 
 <style scoped>
 .container {
-  min-height: 100vh;
+  height: 100vh;
   padding: 40px 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }

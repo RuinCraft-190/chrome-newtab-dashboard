@@ -14,13 +14,10 @@ body {
 #app {
   width: 100vw;
   height: 100vh;
-  display: flex;
-  flex-direction: column;
+  overflow: hidden;
 }
 
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
   padding: 40px 20px;
   width: 100%;
 }

@@ -31,11 +31,11 @@
       <div class="work-details">
         <div class="detail-item">
           <span class="detail-label">距离发薪</span>
-          <span class="detail-value">{{ daysUntilPayday }} d</span>
+          <span class="detail-value">{{ daysUntilPayday }} 天</span>
         </div>
         <div class="detail-item">
           <span class="detail-label">距离休息还剩</span>
-          <span class="detail-value">{{ daysUntilWeekend }} d</span>
+          <span class="detail-value">{{ daysUntilWeekend }} 天</span>
         </div>
       </div>
 
