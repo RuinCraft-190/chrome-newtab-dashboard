@@ -93,25 +93,6 @@
           <span class="size-icon">{{ option.icon }}</span>
           <span>{{ option.label }}</span>
         </div>
-        <div class="context-menu-divider"></div>
-        <div
-          class="context-menu-item"
-          @click="onToggleCardVisibility"
-        >
-          <span class="menu-icon">{{ currentCardConfig?.visible ? '👁️' : '👁️‍🗨️' }}</span>
-          {{ currentCardConfig?.visible ? '隐藏卡片' : '显示卡片' }}
-        </div>
-      </template>
-
-      <!-- 卡片可见性菜单（非可调整尺寸的卡片） -->
-      <template v-if="contextMenu.type === 'card-visibility'">
-        <div
-          class="context-menu-item"
-          @click="onToggleCardVisibility"
-        >
-          <span class="menu-icon">{{ currentCardConfig?.visible ? '👁️' : '👁️‍🗨️' }}</span>
-          {{ currentCardConfig?.visible ? '隐藏卡片' : '显示卡片' }}
-        </div>
       </template>
     </div>
   </div>
@@ -277,15 +258,41 @@ async function onResetLayout() {
 
 // 菜单操作：更改卡片尺寸
 async function onChangeCardSize(size: string) {
+  console.log('[App] onChangeCardSize called with size:', size)
+  console.log('[App] currentCardConfig:', currentCardConfig.value)
   if (currentCardConfig.value) {
     const cardId = currentCardConfig.value.id
     const result = await (chrome as any).storage.local.get('dashboardLayout')
-    if (result.dashboardLayout && Array.isArray(result.dashboardLayout.cards)) {
-      const card = result.dashboardLayout.cards.find((c: CardConfig) => c.id === cardId)
+    console.log('[App] Current layout from storage:', result.dashboardLayout)
+
+    if (result.dashboardLayout && result.dashboardLayout.cards) {
+      // 将 cards 转换为数组（可能是类数组对象）
+      const cardsArray = Array.isArray(result.dashboardLayout.cards)
+        ? result.dashboardLayout.cards
+        : Object.values(result.dashboardLayout.cards)
+
+      console.log('[App] cardsArray:', cardsArray)
+
+      // 找到目标卡片
+      const card = cardsArray.find((c: CardConfig) => c.id === cardId)
+      console.log('[App] Found card:', card)
+
       if (card) {
-        card.size = size as any
-        await (chrome as any).storage.local.set({ dashboardLayout: result.dashboardLayout })
-        // 不需要重新加载页面，DashboardGrid 会通过 storage 监听自动更新
+        // 创建新的卡片数组
+        const newCardsArray = cardsArray.map((c: CardConfig) =>
+          c.id === cardId ? { ...c, size: size as any } : c
+        )
+        console.log('[App] newCardsArray:', newCardsArray)
+
+        // 创建新的布局对象
+        const newLayout = {
+          ...result.dashboardLayout,
+          cards: newCardsArray
+        }
+        console.log('[App] New layout to save:', newLayout)
+
+        await (chrome as any).storage.local.set({ dashboardLayout: newLayout })
+        console.log('[App] Layout saved successfully')
       }
     }
   }
@@ -294,16 +301,26 @@ async function onChangeCardSize(size: string) {
 
 // 菜单操作：切换卡片可见性
 async function onToggleCardVisibility() {
+  console.log('[App] onToggleCardVisibility called')
   if (currentCardConfig.value) {
     const cardId = currentCardConfig.value.id
     const result = await (chrome as any).storage.local.get('dashboardLayout')
-    if (result.dashboardLayout && Array.isArray(result.dashboardLayout.cards)) {
-      const card = result.dashboardLayout.cards.find((c: CardConfig) => c.id === cardId)
-      if (card) {
-        card.visible = !card.visible
-        await (chrome as any).storage.local.set({ dashboardLayout: result.dashboardLayout })
-        // 不需要重新加载页面，DashboardGrid 会通过 storage 监听自动更新
+
+    if (result.dashboardLayout && result.dashboardLayout.cards) {
+      // 将 cards 转换为数组（可能是类数组对象）
+      const cardsArray = Array.isArray(result.dashboardLayout.cards)
+        ? result.dashboardLayout.cards
+        : Object.values(result.dashboardLayout.cards)
+
+      // 创建新的布局对象
+      const newLayout = {
+        ...result.dashboardLayout,
+        cards: cardsArray.map((c: CardConfig) =>
+          c.id === cardId ? { ...c, visible: !c.visible } : c
+        )
       }
+      await (chrome as any).storage.local.set({ dashboardLayout: newLayout })
+      console.log('[App] Card visibility toggled successfully')
     }
   }
   closeContextMenu()

@@ -27,9 +27,28 @@
         </div>
       </template>
 
-      <!-- 2x1/1x2 标准模式：倒计时+今日已赚 -->
-      <template v-else-if="cardSize === '2x1' || cardSize === '1x2'">
-        <div class="work-main">
+      <!-- 2x1 横向标准模式：倒计时+今日已赚 -->
+      <template v-else-if="cardSize === '2x1'">
+        <div class="work-main work-main--horizontal">
+          <div class="countdown-section">
+            <div class="countdown-label">距离下班</div>
+            <div class="countdown-time">{{ timeUntilOffWork }}</div>
+          </div>
+          <div class="earnings-section">
+            <div class="earnings-label">今日已赚</div>
+            <div class="earnings-value">¥{{ earnedToday.toFixed(2) }}</div>
+          </div>
+        </div>
+        <div class="work-footer work-footer--standard">
+          <div class="work-schedule">
+            {{ formatTime(settings.workStartHour, settings.workStartMinute) }} - {{ formatTime(settings.workEndHour, settings.workEndMinute) }}
+          </div>
+        </div>
+      </template>
+
+      <!-- 1x2 纵向高屏模式：倒计时+今日已赚 -->
+      <template v-else-if="cardSize === '1x2'">
+        <div class="work-main work-main--vertical">
           <div class="countdown-section">
             <div class="countdown-label">距离下班</div>
             <div class="countdown-time">{{ timeUntilOffWork }}</div>
@@ -90,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import storageHelper from '@shared/utils/storage'
 import type { WorkSettings, CardSize } from '@shared/types'
 
@@ -98,6 +117,11 @@ import type { WorkSettings, CardSize } from '@shared/types'
 const props = defineProps<{
   cardSize?: CardSize
 }>()
+
+// 监听 cardSize 变化
+watch(() => props.cardSize, (newSize, oldSize) => {
+  console.log('[WorkCard] cardSize changed from', oldSize, 'to', newSize)
+}, { immediate: true })
 
 const settings = ref<WorkSettings>({
   monthlySalary: 10000,
@@ -278,6 +302,20 @@ onUnmounted(() => {
   max-width: 200px;
 }
 
+/* ============ 2x1 横向标准模式 ============ */
+.work-main--horizontal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ============ 1x2 纵向高屏模式 ============ */
+.work-main--vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 /* ============ 2x2 完整模式 ============ */
 .work-main--large {
   gap: 20px;
@@ -304,8 +342,7 @@ onUnmounted(() => {
 
 /* ============ 通用样式 ============ */
 .work-main {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: 16px;
 }
 

@@ -82,52 +82,56 @@ let isSavingLayout = false
 async function loadLayout() {
   try {
     const result = await (chrome as any).storage.local.get('dashboardLayout')
-    console.log('Loaded dashboardLayout from storage:', result.dashboardLayout)
+    console.log('[DashboardGrid] Loaded dashboardLayout from storage:', result.dashboardLayout)
 
-    // 检查 cards 是否为数组
-    if (
-      result.dashboardLayout &&
-      Array.isArray(result.dashboardLayout.cards) &&
-      result.dashboardLayout.cards.length > 0
-    ) {
-      layout.value = {
-        version: result.dashboardLayout.version || '1.0.0',
-        columns: result.dashboardLayout.columns || 3
-      }
-      cards.value = result.dashboardLayout.cards
-      console.log('Using existing layout, cards:', cards.value)
-    } else {
-      // 使用默认布局
-      console.log('No valid layout found, using default')
-      const defaultCards = [
-        {
-          id: 'weather-1',
-          type: 'weather' as CardType,
-          size: '1x1',
-          visible: true,
-          position: 0
-        },
-        {
-          id: 'work-1',
-          type: 'work' as CardType,
-          size: '1x1',
-          visible: true,
-          position: 1
-        },
-        {
-          id: 'navigation-1',
-          type: 'navigation' as CardType,
-          size: '2x1',
-          visible: true,
-          position: 2
+    // 检查是否有有效的 cards 数据（可能是数组或类数组对象）
+    if (result.dashboardLayout && result.dashboardLayout.cards) {
+      // 将 cards 转换为数组（可能是类数组对象）
+      const cardsArray = Array.isArray(result.dashboardLayout.cards)
+        ? result.dashboardLayout.cards
+        : Object.values(result.dashboardLayout.cards)
+
+      if (cardsArray.length > 0) {
+        layout.value = {
+          version: result.dashboardLayout.version || '1.0.0',
+          columns: result.dashboardLayout.columns || 3
         }
-      ]
-      cards.value = defaultCards
-      await saveLayout()
-      console.log('Saved default layout')
+        cards.value = cardsArray
+        console.log('[DashboardGrid] Using existing layout, cards:', cards.value)
+        return
+      }
     }
+
+    // 使用默认布局
+    console.log('[DashboardGrid] No valid layout found, using default')
+    const defaultCards = [
+      {
+        id: 'weather-1',
+        type: 'weather' as CardType,
+        size: '1x1',
+        visible: true,
+        position: 0
+      },
+      {
+        id: 'work-1',
+        type: 'work' as CardType,
+        size: '1x1',
+        visible: true,
+        position: 1
+      },
+      {
+        id: 'navigation-1',
+        type: 'navigation' as CardType,
+        size: '2x1',
+        visible: true,
+        position: 2
+      }
+    ]
+    cards.value = defaultCards
+    await saveLayout()
+    console.log('[DashboardGrid] Saved default layout')
   } catch (error) {
-    console.error('Failed to load dashboard layout:', error)
+    console.error('[DashboardGrid] Failed to load dashboard layout:', error)
   }
 }
 
@@ -182,13 +186,16 @@ onMounted(() => {
 
   // 监听 storage 变化，当布局在其他地方被修改时自动刷新
   chrome.storage.onChanged.addListener((changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+    console.log('[DashboardGrid] Storage changed:', { areaName, changes })
     if (areaName === 'local' && changes.dashboardLayout) {
       // 如果是自己保存的布局变化，则跳过重新加载
       if (isSavingLayout) {
-        console.log('Skip reloading: layout changed by self')
+        console.log('[DashboardGrid] Skip reloading: layout changed by self')
         return
       }
-      console.log('Dashboard layout changed in storage, reloading...')
+      console.log('[DashboardGrid] Dashboard layout changed in storage, reloading...')
+      console.log('[DashboardGrid] Old layout:', changes.dashboardLayout.oldValue)
+      console.log('[DashboardGrid] New layout:', changes.dashboardLayout.newValue)
       loadLayout()
     }
   })
