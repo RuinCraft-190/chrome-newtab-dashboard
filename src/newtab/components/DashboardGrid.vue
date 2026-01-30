@@ -75,6 +75,9 @@ const layout = ref({
   columns: 3
 })
 
+// 标志位：防止自己保存的布局触发重新加载
+let isSavingLayout = false
+
 // 从 storage 加载布局
 async function loadLayout() {
   try {
@@ -131,14 +134,20 @@ async function loadLayout() {
 // 保存布局
 async function saveLayout() {
   try {
+    isSavingLayout = true
     await (chrome as any).storage.local.set({
       dashboardLayout: {
         ...layout.value,
         cards: cards.value
       }
     })
+    // 延迟重置标志位，确保 storage.onChange 事件已经触发
+    setTimeout(() => {
+      isSavingLayout = false
+    }, 100)
   } catch (error) {
     console.error('Failed to save dashboard layout:', error)
+    isSavingLayout = false
   }
 }
 
@@ -174,6 +183,11 @@ onMounted(() => {
   // 监听 storage 变化，当布局在其他地方被修改时自动刷新
   chrome.storage.onChanged.addListener((changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
     if (areaName === 'local' && changes.dashboardLayout) {
+      // 如果是自己保存的布局变化，则跳过重新加载
+      if (isSavingLayout) {
+        console.log('Skip reloading: layout changed by self')
+        return
+      }
       console.log('Dashboard layout changed in storage, reloading...')
       loadLayout()
     }
